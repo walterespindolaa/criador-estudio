@@ -509,6 +509,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Mídias marcadas com X no editor. Só são apagadas no Salvar; Cancelar/fechar
   // descarta a marcação (Gabriela, 16/10/2026). Ver CriaPostMedia.paraSair.
   const [midiasParaSair, setMidiasParaSair] = useState<string[]>([]);
+  /* ORDEM PELA FASE DO KANBAN (Walter, 26/11/2026), a mesma regra do editor do
+     criador (PostEditor, vaiProAr). Em produção: o roteiro fica antes da legenda,
+     é o que a social mídia está fazendo. De Aguardando cliente em diante (ajuste,
+     aprovado, postado): a legenda sobe pra logo depois do formato e o roteiro
+     desce pro fim. Walter escolheu que Ajuste solicitado também conta como
+     "vai pro ar": o post já foi pro cliente. A fase é lida só ao abrir o post
+     (openNew/openEdit), pra os campos não pularem de lugar se o status mudar
+     com o editor aberto. A mídia segue no topo no celular nas duas fases. */
+  const [vaiProAr, setVaiProAr] = useState(false);
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
@@ -518,6 +527,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     setInternalTags([]);
     setEnvioPendente(null);
     setMidiasParaSair([]);
+    setVaiProAr(false);
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -525,7 +535,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setMidiasParaSair([]); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setMidiasParaSair([]); setVaiProAr(!!p.approval_status && p.approval_status !== "em_producao"); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
 
   /* LINK DIRETO PRA UMA PEÇA (Walter, 14/09/2026).
      `?post=<id>` abre o editor daquele post assim que a lista carrega. É o que
@@ -669,6 +679,62 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       return { ...prev, platform: pl, format };
     });
   };
+
+  // Roteiro e legenda como blocos soltos: a ordem deles no editor muda com a
+  // fase do post (ver vaiProAr). O conteúdo é o mesmo de antes.
+  const blocoRoteiro = (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
+      {f.approval_mode !== "fast" && (
+        <ClientContentWriter
+          crmClientId={client.crm_client_id ?? null}
+          clienteNome={client.name}
+          titulo={f.title}
+          formato={f.format}
+          valor={f.script ?? ""}
+          onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
+        />
+      )}
+      <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
+    </div>
+  );
+  const blocoLegenda = (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs font-body">Legenda</Label>
+        <div className="flex items-center gap-1">
+          {/* Só aparece pra cliente que já montou o banco de hashtags dele.
+              Acrescenta no fim da legenda, nunca sobrescreve o que foi escrito,
+              e não repete o bloco se já estiver lá. */}
+          {hashtagsCliente.length > 0 && (
+            <button type="button" onClick={() => {
+              const bloco = blocoParaColar(hashtagsCliente);
+              setF((p) => {
+                const atual = (p.caption ?? "").trimEnd();
+                if (atual.includes(bloco)) { toast.info("As hashtags já estão nesta legenda."); return p; }
+                return { ...p, caption: atual ? `${atual}\n\n${bloco}` : bloco };
+              });
+              toast.success(hashtagsCliente.length > LIMITE_HASHTAGS_POST
+                ? `${hashtagsCliente.length} hashtags coladas. O Instagram só considera as ${LIMITE_HASHTAGS_POST} primeiras.`
+                : `${hashtagsCliente.length} hashtag(s) colada(s) na legenda.`);
+            }}
+              title="Colar o bloco de hashtags deste cliente no fim da legenda"
+              className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] transition-colors">
+              <Hash className="h-3.5 w-3.5" /> Colar hashtags
+            </button>
+          )}
+          <button type="button" onClick={() => copiarLegenda(f.caption ?? "")} disabled={!(f.caption ?? "").trim()}
+            className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
+            <Copy className="h-3.5 w-3.5" /> Copiar legenda
+          </button>
+        </div>
+      </div>
+      <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={8} className="rounded-xl min-h-[180px]" />
+      {f.format === "story" && (f.caption ?? "").trim() !== "" && (
+        <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
+      )}
+    </div>
+  );
 
   return (
     <div>
@@ -1251,6 +1317,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 </div>
               </div>
 
+              {/* Vai pro ar: a legenda vem logo depois do formato (ver vaiProAr). */}
+              {vaiProAr && blocoLegenda}
+
               {/* LINHA EDITORIAL: cadastrada na estratégia do cliente, vira
                   etiqueta do post do cronograma até publicar. Só aparece se o
                   cliente TEM linhas (seletor vazio é ruído, não recurso). */}
@@ -1333,58 +1402,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   placeholder="Cole o link da pasta do Drive com os materiais" className="rounded-xl" />
               </div>
 
-              {/* Roteiro / copy sempre disponível (também no Simplificada). */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
-                {f.approval_mode !== "fast" && (
-                  <ClientContentWriter
-                    crmClientId={client.crm_client_id ?? null}
-                    clienteNome={client.name}
-                    titulo={f.title}
-                    formato={f.format}
-                    valor={f.script ?? ""}
-                    onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
-                  />
-                )}
-                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
-              </div>
-
-              {/* Legenda (maior) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs font-body">Legenda</Label>
-                  <div className="flex items-center gap-1">
-                    {/* Só aparece pra cliente que já montou o banco de hashtags dele.
-                        Acrescenta no fim da legenda, nunca sobrescreve o que foi escrito,
-                        e não repete o bloco se já estiver lá. */}
-                    {hashtagsCliente.length > 0 && (
-                      <button type="button" onClick={() => {
-                        const bloco = blocoParaColar(hashtagsCliente);
-                        setF((p) => {
-                          const atual = (p.caption ?? "").trimEnd();
-                          if (atual.includes(bloco)) { toast.info("As hashtags já estão nesta legenda."); return p; }
-                          return { ...p, caption: atual ? `${atual}\n\n${bloco}` : bloco };
-                        });
-                        toast.success(hashtagsCliente.length > LIMITE_HASHTAGS_POST
-                          ? `${hashtagsCliente.length} hashtags coladas. O Instagram só considera as ${LIMITE_HASHTAGS_POST} primeiras.`
-                          : `${hashtagsCliente.length} hashtag(s) colada(s) na legenda.`);
-                      }}
-                        title="Colar o bloco de hashtags deste cliente no fim da legenda"
-                        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] transition-colors">
-                        <Hash className="h-3.5 w-3.5" /> Colar hashtags
-                      </button>
-                    )}
-                    <button type="button" onClick={() => copiarLegenda(f.caption ?? "")} disabled={!(f.caption ?? "").trim()}
-                      className="inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-[11px] font-body font-semibold text-muted-foreground hover:text-primary hover:bg-primary/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors">
-                      <Copy className="h-3.5 w-3.5" /> Copiar legenda
-                    </button>
-                  </div>
-                </div>
-                <Textarea value={f.caption ?? ""} onChange={(e) => setF((p) => ({ ...p, caption: e.target.value }))} rows={8} className="rounded-xl min-h-[180px]" />
-                {f.format === "story" && (f.caption ?? "").trim() !== "" && (
-                  <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
-                )}
-              </div>
+              {/* Criando: roteiro antes da legenda. Vai pro ar: a legenda já
+                  subiu e o roteiro fica por último (ver vaiProAr). */}
+              {!vaiProAr && blocoRoteiro}
+              {!vaiProAr && blocoLegenda}
+              {vaiProAr && blocoRoteiro}
             </div>
 
             {/* Coluna direita: Mídia (própria altura, sem esticar a esquerda).
