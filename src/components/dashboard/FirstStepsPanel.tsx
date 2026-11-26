@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { usePosts } from "@/hooks/usePosts";
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { useSocialConnection } from "@/hooks/useSocialInsights";
@@ -29,6 +30,10 @@ type Step = {
   /** quando não há dado pra derivar, marca como concluído ao clicar */
 };
 
+/** Quantas vezes a pessoa fechou o cartão e em que dia (AAAA-MM-DD). */
+type Fechou = { vezes: number; dia: string };
+const LIMITE_FECHADAS = 3;
+
 export function FirstStepsPanel() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -42,11 +47,27 @@ export function FirstStepsPanel() {
   const { structuredGoals } = useGoals();
   const { ideas: ideias, promoteToPost } = useIdeas({ limit: 8 });
 
-  const dismissKey = user ? `cria-firststeps-dismissed-${user.id}` : "cria-firststeps-dismissed";
-
-  const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
-  });
+  /* FECHOU 3 VEZES, SUMIU (Walter, 26/11/2026). O X guardava "fechado" só no
+     navegador e lia a chave antes do usuário carregar (caía na chave sem id),
+     então o cartão voltava toda hora, e cada aparelho tinha a sua. Agora cada
+     fechada esconde até o dia seguinte e conta na conta da pessoa
+     (user_metadata, vale no app e no computador). Na 3ª, não volta mais.
+     A cópia no localStorage é só pra esconder na hora, sem esperar a rede. */
+  const chaveFechou = user ? `cria-firststeps-fechou-${user.id}` : null;
+  const [fechouLocal, setFechouLocal] = useState<Fechou | null>(null);
+  useEffect(() => {
+    if (!chaveFechou || !user) return;
+    try {
+      const salvo = localStorage.getItem(chaveFechou);
+      if (salvo) { setFechouLocal(JSON.parse(salvo) as Fechou); return; }
+      // Quem fechou na versão antiga conta como 1 fechada.
+      if (localStorage.getItem(`cria-firststeps-dismissed-${user.id}`) === "1") setFechouLocal({ vezes: 1, dia: "" });
+    } catch { /* noop */ }
+  }, [chaveFechou, user]);
+  const fechouConta = user?.user_metadata?.primeiros_passos as Fechou | undefined;
+  const fechou = (fechouConta?.vezes ?? 0) >= (fechouLocal?.vezes ?? 0) ? fechouConta ?? null : fechouLocal;
+  const hoje = new Date().toLocaleDateString("sv-SE");
+  const dismissed = !user || (!!fechou && (fechou.vezes >= LIMITE_FECHADAS || fechou.dia === hoje));
 
   const hasPublished = useMemo(() => posts.some((p) => p.status === "publicado"), [posts]);
 
@@ -78,8 +99,15 @@ export function FirstStepsPanel() {
   const pct = Math.round((completed / total) * 100);
 
   const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem(dismissKey, "1"); } catch { /* noop */ }
+    if (!chaveFechou) return;
+    const novo: Fechou = { vezes: (fechou?.vezes ?? 0) + 1, dia: hoje };
+    setFechouLocal(novo);
+    try { localStorage.setItem(chaveFechou, JSON.stringify(novo)); } catch { /* noop */ }
+    void supabase.auth.updateUser({ data: { primeiros_passos: novo } });
+    const faltam = LIMITE_FECHADAS - novo.vezes;
+    toast(faltam > 0
+      ? `Escondido por hoje. Fechando mais ${faltam} ${faltam === 1 ? "vez" : "vezes"}, ele não volta.`
+      : "Pronto, os primeiros passos não aparecem mais.");
   };
 
   const handleClick = (step: Step) => { navigate(step.to); };
