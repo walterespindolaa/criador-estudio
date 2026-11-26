@@ -30,6 +30,11 @@ export function NotificationNudge() {
       // InstallPrompt, que ensina a instalar ANTES de pedir o aviso.
       if (!podePedirPushAgora()) return;
       if (localStorage.getItem(DISMISS_KEY) === "1") return;
+      /* NÃO NA PRIMEIRA SESSÃO (Walter, 26/11/2026). Quem acabou de sair do
+         onboarding já tem os Primeiros passos pra ler, e o pedido de aviso
+         caía por cima, antes de a pessoa saber pra que serve. Essa sessão nem
+         conta nas 3 vezes: o pedido começa na próxima visita. */
+      try { if (sessionStorage.getItem("cria.tour-adiado") === "1") return; } catch { /* ok */ }
       if (await isPushEnabled()) return;
 
       let count = parseInt(localStorage.getItem(COUNT_KEY) || "0", 10);

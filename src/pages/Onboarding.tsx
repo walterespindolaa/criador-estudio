@@ -11,6 +11,7 @@ import { useContaAtivaId, useAtualizarPerfilAtivo, caminhoDaConta, type PerfilAt
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ORIGEM_IDEIA_IA, ORIGEM_IDEIA_ONBOARDING } from "@/lib/origemIdeia";
 import { validateUpload } from "@/lib/upload-validation";
 import { sanitizeText } from "@/lib/sanitize";
 import { callAIContextBuilder } from "@/lib/ai/claude";
@@ -60,6 +61,7 @@ const PERGUNTAS = 7;
 const TELA_FALA = 7;
 const TELA_IDEIA = 8;
 const TELA_FIM = 9;
+
 /** Fala com menos que isso não tem o que distribuir no brandbook. */
 const MIN_FALA = 40;
 
@@ -399,7 +401,11 @@ const Onboarding = () => {
 
       setGeneratedIdeas(ideasToCreate.map(({ title, format }) => ({ title, format })));
 
-      const profileUpdates: Record<string, unknown> = { onboarding_completed: true, weekly_goal: weeklyGoal };
+      /* onboarding_completed NÃO é marcado aqui (Walter, 26/11/2026): o setup
+         roda no meio da tela 8, e quem saía ali contava como "terminou" e não
+         recebia o e-mail de retomar (re_comeco). Agora só no "Abrir meu
+         estúdio" (enterApp). */
+      const profileUpdates: Record<string, unknown> = { weekly_goal: weeklyGoal };
       if (sanitizedName) profileUpdates.name = sanitizedName;
       if (avatarUrl) profileUpdates.avatar_url = avatarUrl;
       if (sanitizedHandle) profileUpdates.instagram_handle = sanitizedHandle;
@@ -430,7 +436,21 @@ const Onboarding = () => {
         if (contatoErr) console.warn("[onboarding] contato não salvou", contatoErr.message);
       }
 
-      if (finalPillars.length > 0) {
+      /* "TENTAR" NÃO DUPLICA (Walter, 26/11/2026). Depois de um erro, o botão
+         Tentar (ou recarregar no meio) rodava tudo de novo e gravava pilares,
+         hábitos, ideias e itens do brandbook em dobro. Agora confere o que já
+         existe nesta conta e só grava o que falta. */
+      const contar = async (tabela: "pillars" | "habits") => {
+        const { count } = await supabase.from(tabela).select("id", { count: "exact", head: true }).eq("user_id", donoId);
+        return count ?? 0;
+      };
+      const [jaPilares, jaHabitos] = await Promise.all([contar("pillars"), contar("habits")]);
+      const { count: jaIdeiasIa } = await supabase.from("ideas").select("id", { count: "exact", head: true })
+        .eq("user_id", donoId).eq("origin", ORIGEM_IDEIA_IA);
+      const { count: jaMarca } = await supabase.from("brand_items").select("id", { count: "exact", head: true })
+        .eq("user_id", donoId).in("type", ["tom", "objetivo"]);
+
+      if (finalPillars.length > 0 && jaPilares === 0) {
         const { data: pilaresCriados, error: pillarsErr } = await supabase.from("pillars").insert(
           finalPillars.map((x, i) => ({ user_id: donoId, name: x.name, color: x.color, position: i }))
         ).select("id");
@@ -454,7 +474,7 @@ const Onboarding = () => {
       const marcaItens: { user_id: string; type: string; name: string; value?: string; position?: number }[] = [];
       if (tom) marcaItens.push({ user_id: donoId, type: "tom", name: tom, value: parceiroEscolhido.nome, position: 0 });
       objetivos.forEach((o, i) => marcaItens.push({ user_id: donoId, type: "objetivo", name: o, position: i }));
-      if (marcaItens.length > 0) {
+      if (marcaItens.length > 0 && (jaMarca ?? 0) === 0) {
         const { error: eMarca } = await supabase.from("brand_items").insert(marcaItens as never);
         if (eMarca) console.warn("[onboarding] brand_items insert failed:", eMarca);
       }
@@ -479,16 +499,16 @@ const Onboarding = () => {
         else setRespostasBrandbook(respostas.length);
       }
 
-      if (habitsToCreate.length > 0) {
+      if (habitsToCreate.length > 0 && jaHabitos === 0) {
         const { error: habitsErr } = await supabase.from("habits").insert(
           habitsToCreate.map((hName, i) => ({ user_id: donoId, name: hName, position: i }))
         );
         if (habitsErr) console.warn("[onboarding] habits batch insert failed:", habitsErr);
       }
 
-      if (ideasToCreate.length > 0) {
+      if (ideasToCreate.length > 0 && (jaIdeiasIa ?? 0) === 0) {
         const { error: ideasErr } = await supabase.from("ideas").insert(
-          ideasToCreate.map((idea) => ({ user_id: donoId, title: idea.title, platform: idea.platform }))
+          ideasToCreate.map((idea) => ({ user_id: donoId, title: idea.title, platform: idea.platform, origin: ORIGEM_IDEIA_IA }))
         );
         if (ideasErr) console.warn("[onboarding] ideas batch insert failed:", ideasErr);
       }
@@ -528,14 +548,25 @@ const Onboarding = () => {
     setGuardandoIdeia(true);
     const titulo = texto.length > 120 ? `${texto.slice(0, 117).trimEnd()}...` : texto;
     const { error } = await supabase.from("ideas").insert({
-      user_id: donoId, title: titulo, notes: texto.length > 120 ? texto : null, platform: platforms[0] ?? "instagram",
+      user_id: donoId, title: titulo, notes: texto.length > 120 ? texto : null, platform: platforms[0] ?? "instagram", origin: ORIGEM_IDEIA_ONBOARDING,
     } as never);
     setGuardandoIdeia(false);
     if (error) { toast.error("Não consegui guardar a ideia. Tenta de novo?"); return; }
     goNext();
   };
 
-  const enterApp = () => {
+  const [entrando, setEntrando] = useState(false);
+  const enterApp = async () => {
+    if (entrando) return;
+    setEntrando(true);
+    try {
+      if (ehMeuPerfil) await atualizarPerfilAtivo.mutateAsync({ onboarding_completed: true } as PerfilAtivoPatch);
+      else await updateProfile.mutateAsync({ onboarding_completed: true });
+    } catch {
+      setEntrando(false);
+      toast.error("Não consegui abrir seu estúdio. Tenta de novo?");
+      return;
+    }
     if (!ehMeuPerfil) track("StartTrial", { content_name: "onboarding_complete" });
     try { localStorage.removeItem(chaveRascunho); } catch { /* ok */ }
     /* CAI NO INÍCIO (24/10/2026). Antes caía em Ideias e a pessoa não via os
@@ -553,6 +584,7 @@ const Onboarding = () => {
   const anim = { custom: direction, variants: slideVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.22 } } as const;
 
   const p = PARCEIROS[parceiro];
+  const temIdeiaPropria = primeiraIdeia.trim().length > 0;
   const todasIdeias = [
     ...(primeiraIdeia.trim() ? [primeiraIdeia.trim()] : []),
     ...generatedIdeas.map((i) => i.title),
@@ -595,7 +627,7 @@ const Onboarding = () => {
       );
       case TELA_FIM: return (
         <>
-          <BotaoOnb onClick={enterApp} disabled={!setupDone}>
+          <BotaoOnb onClick={() => void enterApp()} disabled={!setupDone || entrando}>
             {setupDone ? "Abrir meu estúdio" : <><Loader2 className="h-5 w-5 animate-spin" /> Terminando de montar...</>}
           </BotaoOnb>
           <MicroOnb>Sua coleção de selos cresce conforme você posta.</MicroOnb>
@@ -939,9 +971,13 @@ const Onboarding = () => {
         {/* ─── 9. Primeiro selo + semana montada ─── */}
         {step === TELA_FIM && (
           <motion.div key="t8" {...anim} className="flex flex-col">
-            <TituloOnb antes={primeiroNome ? "Bom começo," : "Bom começo."} destaque={primeiroNome ? `${primeiroNome}.` : undefined} sub="Você transformou uma ideia no primeiro passo." className="mt-4" />
+            {/* SELO 001 SÓ COM IDEIA DELA (Walter, 26/11/2026). Quem pulou a
+                ideia ganhava o selo "PRIMEIRA IDEIA" e o texto "Você transformou
+                uma ideia...". Agora o selo fica como o próximo a ganhar. */}
+            <TituloOnb antes={primeiroNome ? "Bom começo," : "Bom começo."} destaque={primeiroNome ? `${primeiroNome}.` : undefined}
+              sub={temIdeiaPropria ? "Você transformou uma ideia no primeiro passo." : "Seu estúdio está montado. O selo 001 é seu quando guardar a sua primeira ideia."} className="mt-4" />
 
-            <motion.div initial={{ scale: 1.5, rotate: -30, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.15 }} className="mx-auto mt-5">
+            {temIdeiaPropria && <motion.div initial={{ scale: 1.5, rotate: -30, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.15 }} className="mx-auto mt-5">
               <SeloPicotado>
                 <span className="flex h-[220px] w-[190px] flex-col p-3 text-left" style={{ background: COR.laranja }}>
                   <span className="text-[9px] font-bold tracking-[1.6px]">CRIA · EDIÇÃO 001</span>
@@ -949,11 +985,13 @@ const Onboarding = () => {
                   <span className="flex justify-between font-display text-[13px] font-extrabold"><span>PRIMEIRA IDEIA</span><span>001</span></span>
                 </span>
               </SeloPicotado>
-            </motion.div>
+            </motion.div>}
 
             <p className="mb-2 ml-1 mt-5 text-[11px] font-bold tracking-[1.4px]" style={{ color: "#4A463D" }}>PRÓXIMOS SELOS · NOS SEUS PRIMEIROS PASSOS</p>
             <div className="flex gap-2">
-              <span className="flex-1 rounded-[14px] px-2.5 py-2 text-[11.5px] leading-tight" style={{ background: COR.tinta, color: COR.papel }}><b className="block font-display text-sm">001</b>Primeira ideia</span>
+              {temIdeiaPropria
+                ? <span className="flex-1 rounded-[14px] px-2.5 py-2 text-[11.5px] leading-tight" style={{ background: COR.tinta, color: COR.papel }}><b className="block font-display text-sm">001</b>Primeira ideia</span>
+                : <span className="flex-1 rounded-[14px] border-2 border-dashed px-2.5 py-1.5 text-[11.5px] leading-tight" style={{ borderColor: "#C9C2AC", color: COR.apagado }}><b className="block font-display text-sm">001</b>Primeira ideia</span>}
               <span className="flex-1 rounded-[14px] border-2 border-dashed px-2.5 py-1.5 text-[11.5px] leading-tight" style={{ borderColor: "#C9C2AC", color: COR.apagado }}><b className="block font-display text-sm">002</b>Primeiro post no ar</span>
               <span className="flex-1 rounded-[14px] border-2 border-dashed px-2.5 py-1.5 text-[11.5px] leading-tight" style={{ borderColor: "#C9C2AC", color: COR.apagado }}><b className="block font-display text-sm">003</b>Link na bio no ar</span>
             </div>

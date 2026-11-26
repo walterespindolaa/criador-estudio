@@ -265,6 +265,12 @@ const Login = () => {
                 const { error } = await entrarComGoogle();
                 if (error) { setAbrindoGoogle(false); toast.error("Não deu pra abrir o Google. Tenta de novo ou entra com e-mail."); }
               }} />
+              {/* Quem não tem conta e entra pelo Google aqui ganha uma conta
+                  nova: o aviso é o aceite dos termos dela (Walter, 26/11/2026). */}
+              <p className="-mt-1 text-center text-[13px] leading-snug text-[#6A665D]">
+                Conta nova pelo Google aceita os{" "}
+                <Link to="/termos" target="_blank" className="font-semibold text-[#0050C8] underline underline-offset-2">Termos de Uso</Link>.
+              </p>
               <DivisorOuEmail />
 
               <div className="flex flex-col gap-1.5 lg:gap-2">

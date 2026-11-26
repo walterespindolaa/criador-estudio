@@ -54,6 +54,15 @@ export default function EntrarGoogle() {
       const nova = temGoogle && Date.now() - new Date(user.created_at).getTime() < NOVA_MS;
       if (!nova) { navigate("/", { replace: true }); return; }
 
+      /* ACEITE DOS TERMOS NA CONTA DO GOOGLE (Walter, 26/11/2026). O cadastro
+         por e-mail grava o aceite (accept-terms, com IP e aparelho); pelo
+         Google não gravava nada. As duas telas mostram "aceita os Termos"
+         embaixo do botão, então a conta nova registra aqui. Se falhar, o
+         ProtectedRoute tenta de novo pela marca pendente. */
+      try { localStorage.setItem("cria.termos_pendentes", "1"); } catch { /* modo privado */ }
+      void supabase.functions.invoke("accept-terms", { body: {} })
+        .then(({ error }) => { if (!error) { try { localStorage.removeItem("cria.termos_pendentes"); } catch { /* ok */ } } });
+
       const intencao = meta?.account_intent;
       if (meta && Object.keys(meta).length) {
         const { error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: unknown }>)(

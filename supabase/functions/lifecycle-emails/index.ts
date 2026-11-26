@@ -116,10 +116,10 @@ Deno.serve(async (req) => {
           : {
             assunto: "Bem-vindo ao Cria: comece pelas ideias",
             paragrafos: [
-              "Sua conta está pronta. O jeito mais rápido de ver o Cria trabalhando por você: gere 5 ideias com a IA (ela já conhece o seu nicho), escolha uma e leve pro quadro de produção.",
-              "Conectar o Instagram deixa a IA mais afiada e liga o relatório de desempenho. Dá pra fazer em Configurações quando quiser.",
+              "Sua conta está pronta e as primeiras ideias já estão te esperando, feitas pro seu nicho. Escolha uma, transforme em post e marque o dia de postar: é o jeito mais rápido de ver o Cria trabalhando por você.",
+              "Conectar o Instagram deixa a IA mais afiada e liga o relatório de desempenho. Dá pra fazer em Insights quando quiser.",
             ],
-            botao: { texto: "Gerar minhas primeiras ideias", url: `${APP}/app/ideias` },
+            botao: { texto: "Transformar uma ideia em post", url: `${APP}/app` },
           };
       const ok = await enviarEmail(svc, { para: p.email, nome: p.name, etiqueta: "boas_vindas_" + persona, rodape: "Você recebe este e-mail porque criou uma conta no Cria.", ...conteudo });
       if (ok) { enviados.boas_vindas += 1; await marcar(p.id, "boas_vindas", null); }
@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
         id: string; name: string | null; account_type: string | null; parceiro_role: string | null;
         created_at: string; last_seen_at: string | null; onboarding_completed: boolean;
         subscription_status: string | null; trial_ends_at: string | null; plan: string | null; access_expires_at: string | null;
-        email: string | null; email_confirmado: boolean; n_ideias: number; n_posts: number; n_clientes: number; quer_receber: boolean;
+        email: string | null; email_confirmado: boolean; n_ideias: number; n_posts: number; n_clientes: number; quer_receber: boolean; n_ideias_proprias?: number;
       };
       // Último re_* de cada pessoa (trava de 7 dias) e quando cancelou.
       const { data: recentes } = await svc.from("emails_ciclo").select("user_id, tipo, sent_at")
@@ -399,7 +399,12 @@ Deno.serve(async (req) => {
           b.account_type === "manager" ? "sm" : b.account_type === "parceiro" ? "parceiro" : "criador";
         const dCriada = dias(b.created_at);
         const dVisto = b.last_seen_at ? dias(b.last_seen_at) : dCriada;
-        const usou = persona === "sm" ? b.n_clientes > 0 || b.n_posts > 0 : b.n_ideias > 1 || b.n_posts > 0;
+        /* "Usou" = fez algo depois do onboarding (Walter, 26/11/2026). Antes era
+           "mais de 1 ideia", mas o onboarding já cria até 5 com a IA, então o
+           criador nunca caía no "não usou". n_ideias_proprias não conta as do
+           onboarding (ideas.origin). Sem a coluna (base antiga), mantém o antigo. */
+        const ideiasDela = b.n_ideias_proprias ?? (b.n_ideias > 1 ? b.n_ideias : 0);
+        const usou = persona === "sm" ? b.n_clientes > 0 || b.n_posts > 0 : ideiasDela > 0 || b.n_posts > 0;
         const fimTeste = b.trial_ends_at ? Date.parse(b.trial_ends_at) : null;
         const planoLiberado = !!b.plan && !["free", "trial"].includes(b.plan)
           && (!b.access_expires_at || Date.parse(b.access_expires_at) > now);

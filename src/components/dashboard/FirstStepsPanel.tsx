@@ -17,6 +17,7 @@ import { useGoals } from "@/hooks/useGoals";
 import { useIdeas } from "@/hooks/useIdeas";
 import { TOTAL_PERGUNTAS } from "@/lib/brandbook-perguntas";
 import { toast } from "sonner";
+import { ehIdeiaPropria } from "@/lib/origemIdeia";
 
 type Step = {
   id: string;
@@ -85,7 +86,7 @@ export function FirstStepsPanel() {
   const steps: Step[] = [
     /* SELO 001 (onboarding v3): a tela final do onboarding entrega o 001 pela
        primeira ideia. Ele aparece aqui já ganho, pra lista começar andando. */
-    { id: "ideia", label: "Guardar minha 1ª ideia", icon: Lightbulb, to: "/app/ideias", done: ideias.length > 0, selo: "001" },
+    { id: "ideia", label: "Guardar minha 1ª ideia", icon: Lightbulb, to: "/app/ideias", done: ideias.some(ehIdeiaPropria), selo: "001" },
     { id: "instagram", label: "Conectar meu Instagram", note: "conta profissional, pra ver seus números", icon: Instagram, to: "/app/insights", done: !!conexaoInstagram },
     { id: "post", label: "Criar meu 1º post", note: "a partir de uma das suas ideias", icon: Lightbulb, to: "/app/ideias", done: posts.length > 0 },
     { id: "moodboard", label: "Completar meu Brandbook", note: `${respondidas} de ${TOTAL_PERGUNTAS} respondidas · a Cria IA escreve com a sua cara`, icon: Palette, to: "/app/brandbook", done: brandbookFeito },
@@ -116,10 +117,13 @@ export function FirstStepsPanel() {
      o onboarding, 6 em 10 saíam sem abrir nenhuma ferramenta: caíam numa lista
      de 7 itens e tinham que decidir sozinhos por onde começar. Enquanto não
      existe post, a ideia que a própria pessoa escreveu no onboarding aparece em
-     destaque com um botão só. A mais antiga da lista é a dela (as da Cria IA
-     entram depois). */
+     destaque com um botão só. */
+  /* A dela primeiro (Walter, 26/11/2026): a IA grava as ideias antes da
+     pessoa clicar em "Guardar", então "a mais antiga" era quase sempre da IA.
+     Agora procura a que ela escreveu; sem ela, cai na mais antiga. */
+  const livres = [...ideias].reverse().filter((i) => !i.promoted_to_post_id);
   const ideiaDaVez = posts.length === 0
-    ? [...ideias].reverse().find((i) => !i.promoted_to_post_id) ?? null
+    ? livres.find(ehIdeiaPropria) ?? livres[0] ?? null
     : null;
   const virarPost = async () => {
     if (!ideiaDaVez || promoteToPost.isPending) return;
