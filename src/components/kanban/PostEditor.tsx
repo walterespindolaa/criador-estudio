@@ -422,6 +422,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Post de YouTube com cara de YouTube (Walter, 25/11/2026, mockup aprovado).
   const ehYouTube = platform === "youtube";
   const ehVideoYt = ehYouTube && format === "video";
+  // No YouTube a descrição já abre: é o texto que vai pro ar (26/11/2026).
+  useEffect(() => { if (open && ehYouTube) setLegendaAberta(true); }, [open, ehYouTube, post?.id]);
   // Trocar de rede ajusta o formato: o LinkedIn tem lista própria (texto,
   // documento) e esses dois não existem nas outras redes.
   const trocarPlataforma = (p: string) => {
@@ -2009,6 +2011,253 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   />
   );
 
+  /* ESTRUTURA DO POST (hook, roteiro, CTA, cenas). No YouTube ela desce pro
+     fim, depois do que vai pro ar (Walter, 26/11/2026: "ta confuso deixar ali o
+     hook e cta em cima e a parte do texto mesmo ... la pra baixo no ponto 2").
+     Nos outros formatos continua dentro do passo 1, como sempre. */
+  const renderEstrutura = () => {
+                  const iconMap: Record<string, React.ElementType> = {
+                    Anchor, Layers, Type, Radio, MousePointerClick, MessageSquare, PenLine,
+                  };
+                  return (
+                    <div className="space-y-4">
+                      {formatStructure.fields.map((field) => {
+                        if (field.key === "caption") return null; // legenda vive no passo 2
+                        const IconComponent = iconMap[field.icon] || PenLine;
+                        const value = field.key === "hook" ? hook
+                          : field.key === "script" ? script
+                          : field.key === "cta" ? cta : "";
+                        const setter = field.key === "hook" ? setHook
+                          : field.key === "script" ? setScript
+                          : field.key === "cta" ? setCta : (() => {});
+                        return (
+                          <div key={field.key} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="font-body text-sm flex items-center gap-2">
+                                <IconComponent className="h-4 w-4" /> {field.label}
+                              </Label>
+                              {field.key === "hook" && format !== "live" && (
+                                <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
+                              )}
+                              {field.key === "script" && script.trim() && (
+                                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground"
+                                  onClick={() => void baixarRoteiroPdf()} disabled={gerandoPdf}>
+                                  {gerandoPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  Roteiro em PDF
+                                </Button>
+                              )}
+                            </div>
+                            <Textarea
+                              placeholder={field.placeholder}
+                              value={value}
+                              onChange={(e) => setter(e.target.value)}
+                              className="rounded-xl"
+                              rows={field.rows}
+                            />
+                          </div>
+                        );
+                      })}
+                      {formatStructure.hasDynamicSections && (
+                        <CarouselWriter
+                          titulo={title}
+                          formato={format}
+                          /* NOME do pilar, não o id (29/09/2026): ia o UUID pro
+                             prompt ("Pilar: 1f73e788-...") e a IA não tinha como
+                             saber que era "Casa e organização". */
+                          pilar={pillars.find((p) => p.id === pillarId)?.name || undefined}
+                          sections={sections}
+                          onChange={setSections}
+                          hook={hook}
+                          onHook={setHook}
+                          cta={cta}
+                          onCta={setCta}
+                          unify={formatStructure.devField}
+                        />
+                      )}
+                      {formatStructure.hasDynamicSections && !formatStructure.devField && (
+                        <ScriptEditor
+                          sections={sections}
+                          onChange={setSections}
+                          sectionLabel={formatStructure.sectionLabel ?? "Seção"}
+                          comMinuto={ehVideoYt}
+                          picking={picking}
+                          uploadingLocal={uploadingLocal}
+                          onUploadLocalForSection={(index) => {
+                            if (!userId) return;
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
+                            input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
+
+                            const cleanup = () => {
+                              if (input.parentNode) input.parentNode.removeChild(input);
+                            };
+
+                            input.addEventListener("change", async () => {
+                              try {
+                                const raw = input.files?.[0];
+                                if (!raw) return;
+                                const validation = validateUpload(raw, "postMedia");
+                                if (!validation.ok) {
+                                  toast.error(validation.reason);
+                                  return;
+                                }
+                                try {
+                                  setUploadingLocal(true);
+                                  const file = await capFullImage(raw);
+                                  const safeName = sanitizeStoragePath(file.name);
+                                  const path = `${userId}/${Date.now()}-${safeName}`;
+                                  const { error: upErr } = await supabase.storage
+                                    .from("media")
+                                    .upload(path, file, { upsert: true, contentType: file.type });
+                                  if (upErr) {
+                                    console.error("[section-upload] storage error", upErr);
+                                    toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
+                                    return;
+                                  }
+                                  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+
+                                  // Registra em external_media_refs (provider='storage') pra
+                                  // Feed e Arquivos enxergarem; cota e incrementada.
+                                  let mediaRefId: string | null = null;
+                                  const { data: inserted, error: insErr } = await supabase
+                                    .from("external_media_refs")
+                                    .insert({
+                                      user_id: userId,
+                                      post_id: post?.id ?? null,
+                                      provider: "storage",
+                                      external_file_id: path,
+                                      file_name: file.name,
+                                      file_type: file.type || null,
+                                      file_size: file.size,
+                                      thumbnail_url: urlData.publicUrl,
+                                      view_url: urlData.publicUrl,
+                                    })
+                                    .select("id")
+                                    .single();
+                                  if (insErr) {
+                                    console.error("[section-upload] external_media_refs insert error", insErr);
+                                  } else if (inserted) {
+                                    mediaRefId = (inserted as { id: string }).id;
+                                    if (!post?.id) {
+                                      // backfill no save (mesmo mecanismo de pendingDriveFiles, mas em lista propria)
+                                      setPendingSectionRefIds((prev) => [...prev, mediaRefId!]);
+                                    }
+                                    const { error: incErr } = await (supabase.rpc as unknown as (
+                                      fn: string, args: unknown,
+                                    ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
+                                    if (incErr) console.error("[section-upload] increment_storage failed (+)", incErr);
+                                  }
+
+                                  setSections((prev) =>
+                                    prev.map((s, j) =>
+                                      j === index
+                                        ? {
+                                            ...s,
+                                            driveFileId: path,
+                                            driveFileName: file.name,
+                                            driveThumbnail: urlData.publicUrl,
+                                            mediaRefId,
+                                          }
+                                        : s
+                                    )
+                                  );
+                                } catch (err) {
+                                  console.error("[section-upload] unexpected", err);
+                                  toast.error("Erro ao enviar midia.");
+                                } finally {
+                                  setUploadingLocal(false);
+                                }
+                              } finally {
+                                cleanup();
+                              }
+                            }, { once: true });
+
+                            input.addEventListener("cancel", cleanup, { once: true });
+                            setTimeout(() => {
+                              if (!input.files || input.files.length === 0) cleanup();
+                            }, 5 * 60 * 1000);
+
+                            document.body.appendChild(input);
+                            input.click();
+                          }}
+                          onRemoveSectionMedia={async (index) => {
+                            const sec = sections[index];
+                            const refId = sec?.mediaRefId ?? null;
+                            const storagePath = sec?.driveFileId ?? null;
+                            // 1) limpa a UI imediatamente
+                            setSections((prev) =>
+                              prev.map((s, j) =>
+                                j === index
+                                  ? {
+                                      ...s,
+                                      driveFileId: null,
+                                      driveFileName: null,
+                                      driveThumbnail: null,
+                                      mediaRefId: null,
+                                    }
+                                  : s
+                              )
+                            );
+                            if (!refId) return; // midia de Drive antiga sem mediaRefId, nada a sincronizar
+                            try {
+                              // Busca file_size pra devolver pra cota
+                              const { data: refRow } = await supabase
+                                .from("external_media_refs")
+                                .select("file_size, provider, external_file_id")
+                                .eq("id", refId)
+                                .maybeSingle();
+                              await supabase.from("external_media_refs").delete().eq("id", refId);
+                              // remove do state de pending se ainda estava la (post novo)
+                              setPendingSectionRefIds((prev) => prev.filter((id) => id !== refId));
+                              const provider = (refRow as { provider?: string | null } | null)?.provider;
+                              const sizeBytes = (refRow as { file_size?: number | null } | null)?.file_size ?? null;
+                              const filePath = ((refRow as { external_file_id?: string | null } | null)?.external_file_id) ?? storagePath;
+                              if (provider === "storage" && filePath) {
+                                await supabase.storage.from("media").remove([filePath]);
+                                if (sizeBytes && sizeBytes > 0 && userId) {
+                                  const { error: decErr } = await (supabase.rpc as unknown as (
+                                    fn: string, args: unknown,
+                                  ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -sizeBytes });
+                                  if (decErr) console.error("[section-upload] increment_storage failed (-)", decErr);
+                                }
+                              }
+                            } catch (e) {
+                              console.error("[section-upload] remove sync failed", e);
+                            }
+                          }}
+                          onPickDriveForSection={async (index) => {
+                            const before = new Date().toISOString();
+                            await pickAndSave(undefined);
+                            const { data } = await supabase
+                              .from("external_media_refs")
+                              .select("external_file_id, file_name, thumbnail_url")
+                              .eq("user_id", userId)
+                              .is("post_id", null)
+                              .gte("created_at", before)
+                              .order("created_at", { ascending: false })
+                              .limit(1);
+                            if (data && data[0]) {
+                              setSections((prev) =>
+                                prev.map((s, j) =>
+                                  j === index
+                                    ? {
+                                        ...s,
+                                        driveFileId: data[0].external_file_id,
+                                        driveFileName: data[0].file_name,
+                                        driveThumbnail: data[0].thumbnail_url,
+                                      }
+                                    : s
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+  };
+
   return (
     <>
       <StickerCelebration
@@ -2260,7 +2509,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
                 {/* Pilar no cabeçalho do bloco (Walter, 19/10/2026): antes ficava
                     numa linha solta em cima e desalinhava o começo das colunas. */}
-                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." extra={<>
+                <BlocoCabecalho numero={1} titulo={ehYouTube ? "O vídeo" : "O conteúdo do post"} subtitulo={ehYouTube ? "Formato e título. O resto vem nos passos de baixo, na ordem do YouTube." : "Escolha o formato e escreva a estrutura."} extra={<>
             {pillars.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Popover>
@@ -2469,255 +2718,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Roteiro/estrutura (muda conforme o formato). A LEGENDA saiu daqui
                     de proposito: agora tem lugar unico no passo 2, pra ninguem mais
                     procurar "onde escrevo a legenda". */}
-                {(() => {
-                  const iconMap: Record<string, React.ElementType> = {
-                    Anchor, Layers, Type, Radio, MousePointerClick, MessageSquare, PenLine,
-                  };
-                  return (
-                    <div className="space-y-4">
-                      {ehYouTube && (
-                        <TituloYouTube valor={yt.titulo ?? ""} onChange={(v) => setYt((o) => ({ ...o, titulo: v }))} tituloPost={title} ctx={ctxYt} />
-                      )}
-                      {formatStructure.fields.map((field) => {
-                        if (field.key === "caption") return null; // legenda vive no passo 2
-                        const IconComponent = iconMap[field.icon] || PenLine;
-                        const value = field.key === "hook" ? hook
-                          : field.key === "script" ? script
-                          : field.key === "cta" ? cta : "";
-                        const setter = field.key === "hook" ? setHook
-                          : field.key === "script" ? setScript
-                          : field.key === "cta" ? setCta : (() => {});
-                        return (
-                          <div key={field.key} className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <Label className="font-body text-sm flex items-center gap-2">
-                                <IconComponent className="h-4 w-4" /> {field.label}
-                              </Label>
-                              {field.key === "hook" && format !== "live" && (
-                                <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
-                              )}
-                              {field.key === "script" && script.trim() && (
-                                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground"
-                                  onClick={() => void baixarRoteiroPdf()} disabled={gerandoPdf}>
-                                  {gerandoPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                                  Roteiro em PDF
-                                </Button>
-                              )}
-                            </div>
-                            <Textarea
-                              placeholder={field.placeholder}
-                              value={value}
-                              onChange={(e) => setter(e.target.value)}
-                              className="rounded-xl"
-                              rows={field.rows}
-                            />
-                          </div>
-                        );
-                      })}
-                      {formatStructure.hasDynamicSections && (
-                        <CarouselWriter
-                          titulo={title}
-                          formato={format}
-                          /* NOME do pilar, não o id (29/09/2026): ia o UUID pro
-                             prompt ("Pilar: 1f73e788-...") e a IA não tinha como
-                             saber que era "Casa e organização". */
-                          pilar={pillars.find((p) => p.id === pillarId)?.name || undefined}
-                          sections={sections}
-                          onChange={setSections}
-                          hook={hook}
-                          onHook={setHook}
-                          cta={cta}
-                          onCta={setCta}
-                          unify={formatStructure.devField}
-                        />
-                      )}
-                      {formatStructure.hasDynamicSections && !formatStructure.devField && (
-                        <ScriptEditor
-                          sections={sections}
-                          onChange={setSections}
-                          sectionLabel={formatStructure.sectionLabel ?? "Seção"}
-                          comMinuto={ehVideoYt}
-                          picking={picking}
-                          uploadingLocal={uploadingLocal}
-                          onUploadLocalForSection={(index) => {
-                            if (!userId) return;
-                            const input = document.createElement("input");
-                            input.type = "file";
-                            input.accept = "image/*";
-                            input.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none";
-
-                            const cleanup = () => {
-                              if (input.parentNode) input.parentNode.removeChild(input);
-                            };
-
-                            input.addEventListener("change", async () => {
-                              try {
-                                const raw = input.files?.[0];
-                                if (!raw) return;
-                                const validation = validateUpload(raw, "postMedia");
-                                if (!validation.ok) {
-                                  toast.error(validation.reason);
-                                  return;
-                                }
-                                try {
-                                  setUploadingLocal(true);
-                                  const file = await capFullImage(raw);
-                                  const safeName = sanitizeStoragePath(file.name);
-                                  const path = `${userId}/${Date.now()}-${safeName}`;
-                                  const { error: upErr } = await supabase.storage
-                                    .from("media")
-                                    .upload(path, file, { upsert: true, contentType: file.type });
-                                  if (upErr) {
-                                    console.error("[section-upload] storage error", upErr);
-                                    toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`);
-                                    return;
-                                  }
-                                  const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-
-                                  // Registra em external_media_refs (provider='storage') pra
-                                  // Feed e Arquivos enxergarem; cota e incrementada.
-                                  let mediaRefId: string | null = null;
-                                  const { data: inserted, error: insErr } = await supabase
-                                    .from("external_media_refs")
-                                    .insert({
-                                      user_id: userId,
-                                      post_id: post?.id ?? null,
-                                      provider: "storage",
-                                      external_file_id: path,
-                                      file_name: file.name,
-                                      file_type: file.type || null,
-                                      file_size: file.size,
-                                      thumbnail_url: urlData.publicUrl,
-                                      view_url: urlData.publicUrl,
-                                    })
-                                    .select("id")
-                                    .single();
-                                  if (insErr) {
-                                    console.error("[section-upload] external_media_refs insert error", insErr);
-                                  } else if (inserted) {
-                                    mediaRefId = (inserted as { id: string }).id;
-                                    if (!post?.id) {
-                                      // backfill no save (mesmo mecanismo de pendingDriveFiles, mas em lista propria)
-                                      setPendingSectionRefIds((prev) => [...prev, mediaRefId!]);
-                                    }
-                                    const { error: incErr } = await (supabase.rpc as unknown as (
-                                      fn: string, args: unknown,
-                                    ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: file.size });
-                                    if (incErr) console.error("[section-upload] increment_storage failed (+)", incErr);
-                                  }
-
-                                  setSections((prev) =>
-                                    prev.map((s, j) =>
-                                      j === index
-                                        ? {
-                                            ...s,
-                                            driveFileId: path,
-                                            driveFileName: file.name,
-                                            driveThumbnail: urlData.publicUrl,
-                                            mediaRefId,
-                                          }
-                                        : s
-                                    )
-                                  );
-                                } catch (err) {
-                                  console.error("[section-upload] unexpected", err);
-                                  toast.error("Erro ao enviar midia.");
-                                } finally {
-                                  setUploadingLocal(false);
-                                }
-                              } finally {
-                                cleanup();
-                              }
-                            }, { once: true });
-
-                            input.addEventListener("cancel", cleanup, { once: true });
-                            setTimeout(() => {
-                              if (!input.files || input.files.length === 0) cleanup();
-                            }, 5 * 60 * 1000);
-
-                            document.body.appendChild(input);
-                            input.click();
-                          }}
-                          onRemoveSectionMedia={async (index) => {
-                            const sec = sections[index];
-                            const refId = sec?.mediaRefId ?? null;
-                            const storagePath = sec?.driveFileId ?? null;
-                            // 1) limpa a UI imediatamente
-                            setSections((prev) =>
-                              prev.map((s, j) =>
-                                j === index
-                                  ? {
-                                      ...s,
-                                      driveFileId: null,
-                                      driveFileName: null,
-                                      driveThumbnail: null,
-                                      mediaRefId: null,
-                                    }
-                                  : s
-                              )
-                            );
-                            if (!refId) return; // midia de Drive antiga sem mediaRefId, nada a sincronizar
-                            try {
-                              // Busca file_size pra devolver pra cota
-                              const { data: refRow } = await supabase
-                                .from("external_media_refs")
-                                .select("file_size, provider, external_file_id")
-                                .eq("id", refId)
-                                .maybeSingle();
-                              await supabase.from("external_media_refs").delete().eq("id", refId);
-                              // remove do state de pending se ainda estava la (post novo)
-                              setPendingSectionRefIds((prev) => prev.filter((id) => id !== refId));
-                              const provider = (refRow as { provider?: string | null } | null)?.provider;
-                              const sizeBytes = (refRow as { file_size?: number | null } | null)?.file_size ?? null;
-                              const filePath = ((refRow as { external_file_id?: string | null } | null)?.external_file_id) ?? storagePath;
-                              if (provider === "storage" && filePath) {
-                                await supabase.storage.from("media").remove([filePath]);
-                                if (sizeBytes && sizeBytes > 0 && userId) {
-                                  const { error: decErr } = await (supabase.rpc as unknown as (
-                                    fn: string, args: unknown,
-                                  ) => Promise<{ error: unknown }>)("increment_storage", { _user: userId, _delta: -sizeBytes });
-                                  if (decErr) console.error("[section-upload] increment_storage failed (-)", decErr);
-                                }
-                              }
-                            } catch (e) {
-                              console.error("[section-upload] remove sync failed", e);
-                            }
-                          }}
-                          onPickDriveForSection={async (index) => {
-                            const before = new Date().toISOString();
-                            await pickAndSave(undefined);
-                            const { data } = await supabase
-                              .from("external_media_refs")
-                              .select("external_file_id, file_name, thumbnail_url")
-                              .eq("user_id", userId)
-                              .is("post_id", null)
-                              .gte("created_at", before)
-                              .order("created_at", { ascending: false })
-                              .limit(1);
-                            if (data && data[0]) {
-                              setSections((prev) =>
-                                prev.map((s, j) =>
-                                  j === index
-                                    ? {
-                                        ...s,
-                                        driveFileId: data[0].external_file_id,
-                                        driveFileName: data[0].file_name,
-                                        driveThumbnail: data[0].thumbnail_url,
-                                      }
-                                    : s
-                                )
-                              );
-                            }
-                          }}
-                        />
-                      )}
-                      {ehYouTube && (
-                        <ExtrasYouTube yt={yt} onChange={(patch) => setYt((o) => ({ ...o, ...patch }))} ctx={ctxYt} tituloAtual={yt.titulo || title}
-                          categoriaPadrao={categoriaDoNicho(profile?.niche)} />
-                      )}
-                    </div>
-                  );
-                })()}
+                {ehYouTube
+                  ? <TituloYouTube valor={yt.titulo ?? ""} onChange={(v) => setYt((o) => ({ ...o, titulo: v }))} tituloPost={title} ctx={ctxYt} />
+                  : renderEstrutura()}
 
               </section>
 
@@ -3050,6 +3053,23 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 )}
                 </>)}
               </section>
+
+              {/* YouTube na ordem do que vai pro ar (Walter, 26/11/2026): título,
+                  descrição, depois tags, miniatura e categoria. O roteiro (gancho,
+                  cenas, CTA) é só pra gravar, então fica por último. */}
+              {ehYouTube && (
+                <section className="rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
+                  <BlocoCabecalho numero={3} titulo="Tags, miniatura e categoria" subtitulo="Vai junto com o vídeo no YouTube." />
+                  <ExtrasYouTube yt={yt} onChange={(patch) => setYt((o) => ({ ...o, ...patch }))} ctx={ctxYt} tituloAtual={yt.titulo || title}
+                    categoriaPadrao={categoriaDoNicho(profile?.niche)} />
+                </section>
+              )}
+              {ehYouTube && (
+                <section className="rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
+                  <BlocoCabecalho numero={4} titulo="O roteiro" subtitulo="Gancho, cenas e CTA pra você gravar. Não aparece no YouTube." />
+                  {renderEstrutura()}
+                </section>
+              )}
 
               {/* O antigo passo 4 "Quando publicar" saiu daqui: data e hora agora
                   vivem compactos no topo (bloco de detalhes do passo 1), e o widget
