@@ -19,6 +19,7 @@ import {
   RefreshCw, Minus, Plus, SmilePlus, Briefcase, StickyNote,
   GripVertical,
   Play, Video, ExternalLink,
+  Send,
 } from "lucide-react";
 import { useTour } from "@/components/tour/TourProvider";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,8 @@ import { RedesSoMaster } from "@/components/shared/RedesSoMaster";
 import { ResultadoLinkedIn } from "@/components/shared/ResultadoLinkedIn";
 import { PublishButton } from "./PublishButton";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useProfile } from "@/hooks/useProfile";
+import { NOME_REDE, redeLiberada, type RedeNova } from "@/hooks/usePublicarRedes";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
@@ -255,6 +258,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   }, []);
   const { startTour } = useTour();
   const isNew = !post;
+  /* PUBLICAR SEM FECHAR E ABRIR DE NOVO (Walter, 26/11/2026: "ele só deixa eu
+     postar depois que eu crio o arquivo, e aí ... tenho que abrir ele de novo").
+     Post novo ganha o botão "Criar e publicar": cria o post, o editor continua
+     aberto e a caixa de publicar aparece no lugar. `criado` guarda o id até o
+     editor fechar; daí em diante salvar atualiza esse post em vez de criar outro. */
+  const [criado, setCriado] = useState<string | null>(null);
+  const criadoRef = useRef<string | null>(null);
+  useEffect(() => { criadoRef.current = null; setCriado(null); }, [open, post?.id]);
+  const idDoPost = post?.id ?? criado;
   /* ENVIAR PRA PARCEIRO NO POST DO CLIENTE (Walter, 19/10/2026). Quando a
      agência está dentro do Cria de um cliente (Kanban do cliente ou a conta
      dele aberta), o post é do cliente e o parceiro é da agência: o botão
@@ -397,10 +409,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const initialLoadCompleteRef = useRef(false);
 
   const { profile } = useActiveProfile();
+  // Quem está logado (não a conta aberta): é por ele que YouTube e TikTok liberam.
+  const { profile: meuPerfil } = useProfile();
   // LinkedIn como plataforma do post: só o master enquanto está em teste (Walter, 25/11/2026).
   // Liberado pra todos em 25/11/2026 (antes só o master via LinkedIn aqui).
   const plataformas: string[] = [...PLATFORMS, ...PLATAFORMAS_EXTRAS];
   const ehLinkedIn = platform === "linkedin";
+  /* Post de YouTube, TikTok ou LinkedIn não é do Instagram (Walter, 26/11/2026:
+     "se eu selecionei o YouTube, por que lá em cima tá aparecendo o Instagram e
+     do lado a capa do Reels"). Some a caixa do Instagram e a capa do Reels. */
+  const redeDeFora = platform === "youtube" || platform === "tiktok" || platform === "linkedin";
   // Post de YouTube com cara de YouTube (Walter, 25/11/2026, mockup aprovado).
   const ehYouTube = platform === "youtube";
   const ehVideoYt = ehYouTube && format === "video";
@@ -755,12 +773,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const gravarPendente = useCallback(async () => {
     // Agendar/publicar é uma ação explícita: grava tudo, inclusive data e hora
     // (que o auto-save não grava mais), pra conferência usar o que está na tela.
-    if (!post?.id) return;
+    if (!idDoPost) return;
     if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
-    await updatePost.mutateAsync({ id: post.id, updates: buildSavePayload() });
+    await updatePost.mutateAsync({ id: idDoPost, updates: buildSavePayload() });
     setAutoSaveStatus("saved");
     setTimeout(() => setAutoSaveStatus(null), 1500);
-  }, [post?.id, updatePost, buildSavePayload]);
+  }, [idDoPost, updatePost, buildSavePayload]);
 
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isRefAiLoading) return;
@@ -1122,7 +1140,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   };
 
 
-  const handleSave = async () => {
+  const handleSave = async (opts?: { ficarAberto?: boolean }) => {
     if (!title.trim() || saving) return; // trava double-submit (inclui a etapa de IA)
     setSaving(true);
     try {
@@ -1142,12 +1160,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
     let newPostId: string | undefined;
     try {
-      if (post) {
-        await updatePost.mutateAsync({ id: post.id, updates: data });
-        newPostId = post.id;
+      const jaExiste = post?.id ?? criadoRef.current;
+      if (jaExiste) {
+        await updatePost.mutateAsync({ id: jaExiste, updates: data });
+        newPostId = jaExiste;
       } else {
         const created = await createPost.mutateAsync(data as never);
         newPostId = created.id;
+        criadoRef.current = created.id;
+        setCriado(created.id);
       }
     } catch {
       toast.error("Erro ao salvar post.");
@@ -1213,7 +1234,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               : supabase.from("external_media_refs").update({ position: idx }).eq("id", id),
           ),
         );
-        setPendingDriveFiles([]);
+        /* Criou e ficou aberto pra publicar: a tira continua mostrando a mídia,
+           já com os ids de verdade (o post ainda está no modo "novo" na tela). */
+        setPendingDriveFiles(opts?.ficarAberto ? pendingDriveFiles.map((f) => ({ ...f, id: trocaId.get(f.id) ?? f.id })) : []);
         setPendingSectionRefIds([]);
       }
     }
@@ -1230,8 +1253,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
          ela tinha que fechar na mão. Agora fecha como qualquer save; os campos
          de resultado aparecem quando ela reabrir o post (status publicado). */
       onOpenChange(false);
+    } else if (opts?.ficarAberto) {
+      toast.success("Post criado. Agora é só publicar.");
     } else {
-      toast.success(post ? "Post atualizado!" : "Post criado!");
+      toast.success(post || criado ? "Post atualizado!" : "Post criado!");
       onOpenChange(false);
     }
     onSaved();
@@ -1562,9 +1587,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   continuação natural dela. Só aparece pra conta que pode
                   publicar pelo Cria; pros outros a tela fica igual. */}
               {/* Post de LinkedIn não sai no Instagram (25/11/2026): a caixa some. */}
-              {post?.id && !ehLinkedIn && (
+              {/* Post novo de rede que publica pelo Cria: um clique cria e a caixa
+                  de publicar aparece aqui mesmo (Walter, 26/11/2026). */}
+              {!idDoPost && redeDeFora && redeLiberada(platform as RedeNova, meuPerfil?.role === "admin") && (
+                <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
+                  <p className="text-[13px] font-body font-bold text-foreground">Publicar no {NOME_REDE[platform as RedeNova]}</p>
+                  <p className="text-xs font-body text-muted-foreground">Crie o post e a publicação abre aqui mesmo, sem fechar o editor.</p>
+                  <Button variant="hero" size="sm" className="w-full min-h-[40px]" disabled={!title.trim() || saving} onClick={() => handleSave({ ficarAberto: true })}>
+                    <Send className="h-4 w-4 mr-1.5" /> {saving ? "Criando…" : "Criar e publicar"}
+                  </Button>
+                  {!title.trim() && <p className="text-[11px] font-body text-muted-foreground">Dê um título ao post primeiro.</p>}
+                </div>
+              )}
+              {idDoPost && !redeDeFora && (
                 <PublicarNoInstagram
-                  postId={post.id}
+                  postId={idDoPost}
                   // O banco já move o card (ig_agendar_publicacao); aqui só alinha o
                   // status da tela pra o próximo salvar não desfazer.
                   onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
@@ -1577,12 +1614,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
               {/* Publicar também em outras redes (só master): LinkedIn, YouTube e
                   TikTok, de volta em 25/11/2026. */}
-              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform}
+              {idDoPost && <RedesSoMaster postId={idDoPost} legenda={caption} titulo={title} plataforma={platform}
                 aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }} antesDeAgir={gravarPendente}
                 onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
                 onPublicou={() => setStatus("publicado")} />}
               {/* Resultado do post no LinkedIn, digitado à mão (só master, 25/11/2026). */}
-              {post?.id && ehLinkedIn && <ResultadoLinkedIn postId={post.id} />}
+              {idDoPost && ehLinkedIn && <ResultadoLinkedIn postId={idDoPost} />}
 
     </>
   );
@@ -1598,9 +1635,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      publicação já manda a capa junto; faltava o lugar de escolher aqui. */
   /* Post novo (05/11/2026): a capa já aparece antes do primeiro salvar e fica
      em `capaNova` até o post ser criado (ver handleSave). */
-  const comCapa = temCapa(format);
-  const { capa: capaSalva } = useCapaDoPost(comCapa && post?.id ? post.id : null);
-  const capaDoPost = post?.id ? capaSalva : capaNova;
+  const comCapa = temCapa(format) && !redeDeFora;
+  const { capa: capaSalva } = useCapaDoPost(comCapa && idDoPost ? idDoPost : null);
+  const capaDoPost = idDoPost ? capaSalva : capaNova;
 
   const blocoMidia = (
     <>
@@ -2131,8 +2168,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
                   /></span>
                 )}
-                <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
-                  {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
+                <Button variant="hero" size="sm" onClick={() => handleSave()} disabled={!title.trim() || saving}>
+                  {saving ? "Salvando…" : isNew && !criado ? "Criar" : "Salvar"}
                 </Button>
                 {/* O "?" do tutorial e o X moram na DIREITA (Walter, 01/09). */}
                 <button
@@ -3255,8 +3292,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => irPraAba(abaMobile === "previa" ? "texto" : "previa")}>
               <Eye className="h-4 w-4 mr-1.5" /> {abaMobile === "previa" ? "Voltar ao texto" : "Prévia"}
             </Button>
-            <Button variant="hero" size="sm" className="min-h-[44px] flex-[2]" onClick={handleSave} disabled={!title.trim() || saving}>
-              {saving ? "Salvando…" : isNew ? "Criar post" : "Salvar"}
+            <Button variant="hero" size="sm" className="min-h-[44px] flex-[2]" onClick={() => handleSave()} disabled={!title.trim() || saving}>
+              {saving ? "Salvando…" : isNew && !criado ? "Criar post" : "Salvar"}
             </Button>
           </div>
         </DialogContent>

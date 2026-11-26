@@ -126,7 +126,10 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const dirty = useRef(false);
   const busy = uploadImage.isPending || uploadVideo.isPending || addDriveLink.isPending;
   // Capa do Reels (28/09/2026): só formatos de vídeo têm capa no Instagram.
-  const comCapa = temCapa(format);
+  /* Capa do Reels só em post do Instagram (Walter, 26/11/2026): YouTube,
+     TikTok e LinkedIn não usam essa capa. */
+  const redeDeFora = platform === "youtube" || platform === "tiktok" || platform === "linkedin";
+  const comCapa = temCapa(format) && !redeDeFora;
   const { capa } = useCapaDoPost(comCapa ? postId : null);
 
   const media = list.data ?? [];
@@ -385,7 +388,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     <div className="space-y-3">
       {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
           antes da aprovação do cliente mostra que libera depois. */}
-      {platform !== "linkedin" && <PublicarNoInstagram postId={postId} formato={format} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />}
+      {!redeDeFora && <PublicarNoInstagram postId={postId} formato={format} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />}
       {/* Outras redes (só master): LinkedIn, YouTube e TikTok (25/11/2026). */}
       <RedesSoMaster postId={postId} legenda={caption} titulo={title} plataforma={platform} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />
       {approved && (
