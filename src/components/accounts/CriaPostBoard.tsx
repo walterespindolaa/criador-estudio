@@ -698,6 +698,25 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
     </div>
   );
+  /* Cronograma (data + hora) usado em dois lugares do editor: em cima da
+     mídia no celular e logo depois do título no computador. */
+  const blocoCronograma = (
+    <div>
+      <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
+      {/* Data/Horário: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
+      <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
+        <div className="min-w-0">
+          <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
+          <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full h-10 rounded-xl" />
+        </div>
+        <div className="min-w-0">
+          <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
+          <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full h-10 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+
   const blocoLegenda = (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -1205,7 +1224,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <DialogTitle className="font-display">{draftId || !editing ? "Novo post" : "Editar post"}</DialogTitle>
               <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
             </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* TOPO NO CELULAR (Walter, 26/11/2026: "muito bagunçado aqui"). Os
+                quatro botões quebravam em duas linhas, com o Salvar sozinho
+                embaixo. No celular o Cancelar sai (o X do canto já fecha) e
+                tudo cabe numa linha, com o Salvar encostado à direita. */}
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               {/* Cria Parceiros: delegar a produção sem sair do post. Em post
                   NOVO (rascunho) também aparece, desde o "+" (Gabriela,
                   29/09/2026): a escolha fica guardada e vira delegação no Salvar. */}
@@ -1233,8 +1256,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   <Trash2 className="h-4 w-4" />
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
-              <Button size="sm" onClick={submit} disabled={!permPost.podeEditar || create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => void requestCloseForm()}>Cancelar</Button>
+              <Button size="sm" className="ml-auto sm:ml-0" onClick={submit} disabled={!permPost.podeEditar || create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
           </DialogHeader>
           {/* Duas colunas INDEPENDENTES (flex): a mídia não estica mais os campos
@@ -1278,22 +1301,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </div>
 
               {/* Cronograma: data + hora. Subiu pra logo depois do título (Walter,
-                  27/10/2026: "tem como subir o campo dessa data?"): é o que mais
-                  se mexe ao montar a semana, e ficava abaixo da dobra. */}
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
-                {/* Data/Horário: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
-                <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
-                  <div className="min-w-0">
-                    <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
-                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full h-10 rounded-xl" />
-                  </div>
-                  <div className="min-w-0">
-                    <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
-                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full h-10 rounded-xl" />
-                  </div>
-                </div>
-              </div>
+                  27/10/2026: "tem como subir o campo dessa data?"). No celular
+                  ele fica ACIMA da mídia (Walter, 26/11/2026: "a data eu queria
+                  que fosse mais pra cima, em cima da prévia"), então aqui só
+                  aparece do md pra cima. */}
+              <div className="hidden md:block">{blocoCronograma}</div>
 
               {/* Plataforma + Formato */}
               <div className="space-y-3">
@@ -1414,6 +1426,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                não pro fim da rolagem (pedido do Walter, 31/08); no md+ volta
                pra direita como sempre. */}
             <div className="md:w-[46%] md:sticky md:top-0 order-first md:order-none">
+              <div className="md:hidden mb-4">{blocoCronograma}</div>
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <label className="text-xs font-semibold">Mídia</label>
                 <button type="button" onClick={() => setBriefOpen(true)}
@@ -1536,7 +1549,7 @@ function PostsCalendar({ posts, captacoes = [], onOpen, onNewAt, onMove, tagsByP
           const isToday = iso === today;
           const outMonth = d.getMonth() !== anchor.getMonth();
           return (
-            <div key={iso}
+            <div key={iso} data-mover-destino={iso}
               onDragOver={(e) => { e.preventDefault(); if (overDay !== iso) setOverDay(iso); }}
               onDragLeave={() => setOverDay((o) => (o === iso ? null : o))}
               onDrop={() => dropOn(iso)}
@@ -1544,7 +1557,7 @@ function PostsCalendar({ posts, captacoes = [], onOpen, onNewAt, onMove, tagsByP
               className={`min-h-[104px] min-w-0 rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
                 ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
                 ${outMonth ? "opacity-45" : ""}
-                ${overDay === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}
+                ${overDay === iso || mover.sobre === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}
                 ${mover.movendo ? "cursor-pointer ring-1 ring-primary/30" : ""}`}>
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
@@ -1577,7 +1590,7 @@ function PostsCalendar({ posts, captacoes = [], onOpen, onNewAt, onMove, tagsByP
                     onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                     type="button" onClick={(e) => { if (mover.movendo) { e.stopPropagation(); mover.soltarEm(iso); return; } e.stopPropagation(); onOpen(p); }}
                     style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
-                    className={`relative block w-full min-w-0 overflow-hidden rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                    className={`relative block w-full min-w-0 overflow-hidden rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id || mover.arraste?.id === p.id ? "opacity-50 shadow-lg" : ""}`}>
                     <span className="flex items-center gap-1 min-w-0">
                       <span className={`shrink-0 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
                       {/* Com alguém da equipe: pílula violeta com o primeiro nome
