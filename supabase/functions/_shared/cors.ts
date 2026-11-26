@@ -4,6 +4,11 @@ const allowedOrigins = [
   "https://criasocialclub.com.br",
   "http://localhost:5173",
   "http://localhost:8080",
+  // App de loja (26/11/2026): o Capacitor serve o site em capacitor://localhost
+  // no iPhone e em https://localhost no Android. Sem isto, toda função chamada
+  // de dentro do app era barrada pelo próprio WebView.
+  "capacitor://localhost",
+  "https://localhost",
 ];
 
 export function getCorsHeaders(req: Request) {

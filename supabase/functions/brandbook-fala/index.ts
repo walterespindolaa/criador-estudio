@@ -24,6 +24,8 @@ import { createClient } from "npm:@supabase/supabase-js@2"
 const ALLOWED_ORIGINS = [
   "https://app.criasocialclub.com.br", "https://criasocialclub.com.br",
   "http://localhost:5173", "http://localhost:8080",
+  // App de loja (26/11/2026): iPhone (capacitor://localhost) e Android (https://localhost).
+  "capacitor://localhost", "https://localhost",
 ]
 function cors(req: Request) {
   const origin = req.headers.get("origin") ?? ""

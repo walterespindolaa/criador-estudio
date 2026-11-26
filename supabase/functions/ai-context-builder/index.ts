@@ -45,6 +45,8 @@ function storiesEmPartes(parsed: any) {
 const ALLOWED_ORIGINS = [
   "https://app.criasocialclub.com.br", "https://criasocialclub.com.br",
   "http://localhost:5173", "http://localhost:8080",
+  // App de loja (26/11/2026): iPhone (capacitor://localhost) e Android (https://localhost).
+  "capacitor://localhost", "https://localhost",
 ]
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") ?? ""
