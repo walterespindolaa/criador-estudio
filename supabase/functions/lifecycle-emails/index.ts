@@ -125,6 +125,45 @@ Deno.serve(async (req) => {
       if (ok) { enviados.boas_vindas += 1; await marcar(p.id, "boas_vindas", null); }
     }
 
+    // ── 1b. DIA DO 1º POST (Walter, 26/11/2026). O onboarding marca o primeiro
+    //    post pra amanhã. Na manhã seguinte, quem ainda não publicou recebe UM
+    //    e-mail levando direto pro post. Só conta de criador com até 4 dias e
+    //    que não desligou o reengajamento. Push quase não chega ao criador
+    //    (2 de 50 têm), então o e-mail é o caminho principal. ──
+    {
+      const hojeBR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(now));
+      const { data: postsHoje } = await svc.from("posts").select("id, user_id, title, status")
+        .eq("scheduled_date", hojeBR).is("deleted_at", null).neq("status", "publicado")
+        .is("external_client_id", null);
+      const porDono = new Map<string, { id: string; title: string }>();
+      for (const x of (postsHoje ?? []) as { id: string; user_id: string; title: string }[]) {
+        if (!porDono.has(x.user_id)) porDono.set(x.user_id, { id: x.id, title: x.title });
+      }
+      if (porDono.size) {
+        const { data: donos } = await svc.from("profiles")
+          .select("id, name, account_type, created_at, notification_prefs")
+          .in("id", [...porDono.keys()]).gte("created_at", iso(now - 4 * dayMs));
+        type Dono = { id: string; name: string | null; account_type: string | null; created_at: string; notification_prefs: Record<string, unknown> | null };
+        const elegiveis = ((donos ?? []) as Dono[]).filter((d) =>
+          (!d.account_type || d.account_type === "creator") && d.notification_prefs?.reengajamento !== false && !ja.has(`${d.id}:primeiro_post:`));
+        for (const d of await comEmail(elegiveis)) {
+          if (!d.email || d.meuPerfil) continue;
+          const post = porDono.get(d.id)!;
+          const ok = await enviarEmail(svc, {
+            para: d.email, nome: d.name, etiqueta: "primeiro_post",
+            assunto: "Hoje é o dia do seu primeiro post",
+            paragrafos: [
+              `Ontem você deixou marcado pra hoje: "${post.title.slice(0, 90)}".`,
+              "Não precisa sair perfeito. Abra o post, escreva o gancho e a legenda (a Cria IA ajuda) e marque como publicado quando subir. É assim que nasce o selo 002.",
+            ],
+            botao: { texto: "Abrir meu post de hoje", url: `${APP}/app/criando?post=${post.id}` },
+            rodape: "Você recebe este e-mail porque marcou seu primeiro post no Cria.",
+          });
+          if (ok) await marcar(d.id, "primeiro_post", null);
+        }
+      }
+    }
+
     // ── 2 e 3. Trial acabando / acabou (só quem não assinou) ──
     const { data: trials, error: trialsErr } = await svc.from("profiles")
       .select("id, name, account_type, plan, subscription_status, trial_ends_at, created_at")

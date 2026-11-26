@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
     //    clientes esperando aprovação. Uma por pessoa por dia (dedupe). ──────
     const hojeBR = fmtBR.format(new Date(now));
     const [postsHoje, tarefasHoje, aprovPend] = await Promise.all([
-      svc.from("posts").select("user_id, title, status")
+      svc.from("posts").select("id, user_id, title, status")
         .eq("scheduled_date", hojeBR).is("deleted_at", null)
         .not("status", "in", "(publicado)"),
       svc.from("tasks").select("user_id, title, due_date")
@@ -173,10 +173,12 @@ Deno.serve(async (req) => {
         .not("external_client_id", "is", null)
         .or("approval_status.is.null,approval_status.eq.pendente"),
     ]);
-    type Agg = { posts: string[]; tarefas: string[]; atrasadas: number; aprov: number };
+    type Agg = { posts: string[]; postIds: string[]; tarefas: string[]; atrasadas: number; aprov: number };
     const porUser = new Map<string, Agg>();
-    const pega = (id: string) => porUser.get(id) ?? porUser.set(id, { posts: [], tarefas: [], atrasadas: 0, aprov: 0 }).get(id)!;
-    for (const p of (postsHoje.data ?? []) as { user_id: string; title: string }[]) pega(p.user_id).posts.push(p.title);
+    const pega = (id: string) => porUser.get(id) ?? porUser.set(id, { posts: [], postIds: [], tarefas: [], atrasadas: 0, aprov: 0 }).get(id)!;
+    for (const p of (postsHoje.data ?? []) as { id: string; user_id: string; title: string }[]) {
+      const a = pega(p.user_id); a.posts.push(p.title); a.postIds.push(p.id);
+    }
     for (const t of (tarefasHoje.data ?? []) as { user_id: string; title: string; due_date: string }[]) {
       const a = pega(t.user_id);
       if (t.due_date === hojeBR) a.tarefas.push(t.title); else a.atrasadas++;
@@ -207,7 +209,9 @@ Deno.serve(async (req) => {
         rows.push({
           user_id: uid, type: "resumo_dia", title,
           description: descricao.charAt(0).toUpperCase() + descricao.slice(1) + ".",
-          link: a.posts.length ? "/app/criando" : a.aprov ? "/app/aprovacao" : "/app/tarefas",
+          /* Um post só: abre direto nele (Walter, 26/11/2026). É o caso do 1º
+             post que o onboarding marca pra amanhã. */
+          link: a.posts.length === 1 ? `/app/criando?post=${a.postIds[0]}` : a.posts.length ? "/app/criando" : a.aprov ? "/app/aprovacao" : "/app/tarefas",
         });
       }
     }

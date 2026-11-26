@@ -556,6 +556,32 @@ const Onboarding = () => {
   };
 
   const [entrando, setEntrando] = useState(false);
+  /* 1º POST MARCADO PRA AMANHÃ (Walter, 26/11/2026). Só 3 de 21 criadores
+     voltavam num outro dia: saíam do onboarding sem nada marcado. Agora a
+     ideia dela (ou a 1ª da IA, se pulou) vira post com data de amanhã. Amanhã
+     de manhã o aviso do dia e o e-mail "primeiro_post" levam direto pra ele.
+     Dá pra desmarcar na própria tela. */
+  const [postAmanha, setPostAmanha] = useState(true);
+  const amanhaISO = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString("sv-SE"); };
+  const formatoDaRede = (rede: string) =>
+    rede === "youtube" ? "shorts" : rede === "linkedin" ? "texto" : rede === "tiktok" ? "video" : "reels";
+  const marcarPrimeiroPost = async () => {
+    // Meu perfil (dona de agência) fica de fora: o post é da conta dela.
+    if (!postAmanha || ehMeuPerfil || !donoId) return;
+    const { data: livres } = await supabase.from("ideas").select("id, title, platform, origin")
+      .eq("user_id", donoId).is("promoted_to_post_id", null)
+      .in("origin", [ORIGEM_IDEIA_ONBOARDING, ORIGEM_IDEIA_IA]).order("created_at", { ascending: true });
+    const lista = (livres ?? []) as { id: string; title: string; platform: string | null; origin: string | null }[];
+    const ideia = lista.find((i) => i.origin === ORIGEM_IDEIA_ONBOARDING) ?? lista[0];
+    if (!ideia) return;
+    const rede = ideia.platform || platforms[0] || "instagram";
+    const { data: post, error } = await supabase.from("posts").insert({
+      user_id: donoId, title: ideia.title, platform: rede, format: formatoDaRede(rede),
+      status: "ideia", scheduled_date: amanhaISO(), idea_id: ideia.id,
+    } as never).select("id").single();
+    if (error || !post) { console.warn("[onboarding] post de amanhã não criou", error?.message); return; }
+    await supabase.from("ideas").update({ promoted_to_post_id: (post as { id: string }).id } as never).eq("id", ideia.id);
+  };
   const enterApp = async () => {
     if (entrando) return;
     setEntrando(true);
@@ -567,6 +593,9 @@ const Onboarding = () => {
       toast.error("Não consegui abrir seu estúdio. Tenta de novo?");
       return;
     }
+    // Best-effort: se falhar, a pessoa entra igual (o "Comece por aqui" cobre).
+    try { await marcarPrimeiroPost(); } catch { /* ok */ }
+    await qc.invalidateQueries();
     if (!ehMeuPerfil) track("StartTrial", { content_name: "onboarding_complete" });
     try { localStorage.removeItem(chaveRascunho); } catch { /* ok */ }
     /* CAI NO INÍCIO (24/10/2026). Antes caía em Ideias e a pessoa não via os
@@ -1024,6 +1053,22 @@ const Onboarding = () => {
                 </p>
               )}
             </div>
+
+            {setupDone && !ehMeuPerfil && (todasIdeias.length > 0) && (
+              <button type="button" onClick={() => setPostAmanha((v) => !v)} aria-pressed={postAmanha}
+                className="mt-2.5 flex w-full items-center gap-3 rounded-[20px] border-2 px-3.5 py-3 text-left" style={{ background: COR.papel, borderColor: postAmanha ? COR.tinta : COR.borda }}>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] font-display text-[11px] font-extrabold leading-none" style={{ background: COR.rosa }}>
+                  AMANHÃ
+                </span>
+                <span className="min-w-0 flex-1 text-[13px] leading-snug">
+                  <b className="font-display">Seu 1º post fica marcado pra amanhã</b>
+                  <span className="block truncate" style={{ color: COR.apagado }}>{todasIdeias[0]}</span>
+                </span>
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2" style={{ borderColor: COR.tinta, background: postAmanha ? COR.tinta : "transparent" }}>
+                  {postAmanha && <Check className="h-3.5 w-3.5" style={{ color: COR.papel }} strokeWidth={3.5} />}
+                </span>
+              </button>
+            )}
 
             {/* O brandbook já começou: mostra quanto, e que o resto fica nos
                 Primeiros passos (é lá que a pessoa vai terminar). */}
