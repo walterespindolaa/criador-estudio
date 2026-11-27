@@ -20,7 +20,7 @@ export default function Privacidade() {
           Política de Privacidade
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 19 de novembro de 2026 · Versão 1.3
+          Última atualização: 27 de novembro de 2026 · Versão 1.4
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
@@ -186,7 +186,7 @@ export default function Privacidade() {
             </p>
 
             <h3 className="text-base font-display font-semibold text-foreground mt-5 mb-2">
-              Acesso aos seus dados do Google (Drive)
+              Acesso aos seus dados do Google (Drive e YouTube)
             </h3>
             <p className="text-muted-foreground leading-relaxed mb-3">
               Ao conectar sua conta Google, o CRIA solicita acesso estritamente
@@ -207,7 +207,41 @@ export default function Privacidade() {
                 <strong className="text-foreground">Perfil básico (email, profile):</strong>{" "}
                 identificar a conta Google conectada.
               </li>
+              {/* YouTube na política (Walter, 27/11/2026): a verificação do Google
+                  confere se cada escopo pedido aparece aqui, e a política da API
+                  do YouTube exige os links dos Termos do YouTube e da Política de
+                  Privacidade do Google. */}
+              <li>
+                <strong className="text-foreground">YouTube, envio de vídeos (youtube.upload):</strong>{" "}
+                enviar pro seu próprio canal o vídeo de um post que você criou no CRIA,
+                só quando você clica em Publicar ou agenda a publicação. Não editamos nem
+                excluímos vídeos que já estão no seu canal.
+              </li>
+              <li>
+                <strong className="text-foreground">YouTube, leitura da conta (youtube.readonly):</strong>{" "}
+                mostrar o nome e a foto do canal conectado, pra você saber qual canal vai
+                receber o vídeo, e o link e os números públicos do vídeo que o CRIA enviou.
+              </li>
             </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              <strong className="text-foreground">Serviços de API do YouTube:</strong> a
+              publicação no YouTube usa os Serviços de API do YouTube. Ao conectar seu canal,
+              você concorda com os{" "}
+              <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Termos de Serviço do YouTube
+              </a>{" "}
+              e o tratamento feito pelo Google segue a{" "}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Política de Privacidade do Google
+              </a>
+              . Guardamos o token de acesso do canal de forma protegida, só enquanto ele
+              estiver conectado. Ao desconectar no CRIA ou excluir sua conta, o token e os
+              dados do canal são apagados na hora. Você também pode revogar o acesso em{" "}
+              <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                security.google.com/settings/security/permissions
+              </a>
+              , e a partir daí o CRIA não consegue mais usar o token.
+            </p>
             <p className="text-muted-foreground leading-relaxed mt-3">
               <strong className="text-foreground">Uso limitado:</strong> o uso que o
               CRIA faz das informações recebidas das APIs do Google adere à{" "}
@@ -258,6 +292,33 @@ export default function Privacidade() {
               leitura. Os dados do Instagram não são usados para publicidade, não são vendidos
               a terceiros e não são usados para treinar modelos de IA; o acesso se restringe
               às funcionalidades de análise e publicação descritas acima.
+            </p>
+
+            <h3 className="text-base font-display font-semibold text-foreground mt-5 mb-2">
+              Acesso aos seus dados do TikTok
+            </h3>
+            <p className="text-muted-foreground leading-relaxed mb-3">
+              Ao conectar sua conta do TikTok (Login Kit), o CRIA solicita acesso só aos
+              escopos abaixo, com o seu consentimento na tela do TikTok. Você pode
+              desconectar no CRIA ou remover o acesso no app do TikTok, em Configurações e
+              privacidade, Segurança e permissões, Permissões de apps.
+            </p>
+            <ul className="text-muted-foreground leading-relaxed space-y-1 list-disc list-inside">
+              <li>
+                <strong className="text-foreground">Perfil básico (user.info.basic):</strong>{" "}
+                mostrar o nome de exibição e a foto da conta conectada.
+              </li>
+              <li>
+                <strong className="text-foreground">Publicação (video.publish, Content Posting API):</strong>{" "}
+                publicar na sua conta o vídeo de um post que você criou no CRIA, com a
+                privacidade, as interações e a divulgação de conteúdo comercial que você
+                escolher, só quando você clica em Publicar.
+              </li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              Os dados do TikTok não são usados para publicidade, não são vendidos a
+              terceiros e não são usados para treinar modelos de IA. Ao desconectar no CRIA
+              ou excluir sua conta, o token e os dados da conta são apagados na hora.
             </p>
           </div>
 
