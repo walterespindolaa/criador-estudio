@@ -32,7 +32,11 @@ export type ExternalClientInput = { name: string; instagram_handle?: string | nu
 export type ExternalPost = {
   id: string; title: string; platform: string; format: string;
   caption: string | null; hook: string | null;
-  approval_status: "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado" | null;
+  approval_status: "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado" | "arquivado" | null;
+  /** Post arquivado (27/11/2026): pronto mas não vai ao ar. Motivo é obrigatório. */
+  arquivado_motivo?: string | null;
+  arquivado_em?: string | null;
+  arquivado_de?: string | null;
   // Publicação pelo Cria no Instagram (ciclo 5 do plano de publicar).
   publish_status?: string | null; auto_publish?: boolean | null;
   /** Opções do Instagram (figurinhas do story, pelo celular...). */
@@ -71,7 +75,7 @@ export type ExternalPostInput = { title: string; platform: string; format: strin
 // demanda. Mantém board_order (ordenação), scheduled_time e external_client_id (usados
 // via cast pelas telas que consomem estas queries).
 const POST_BOARD_COLUMNS =
-  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, notes, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, prazo_status, prazo_sugerido, cache_parceiro, editorial_line_id, publish_status, auto_publish, ig_opcoes";
+  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, notes, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, prazo_status, prazo_sugerido, cache_parceiro, editorial_line_id, publish_status, auto_publish, ig_opcoes, arquivado_motivo, arquivado_em, arquivado_de";
 
 // Invalida TODAS as queries que renderizam um mesmo post externo em telas diferentes.
 // O mesmo post aparece no kanban do cliente (cria-posts), na Agenda + painel de
@@ -507,6 +511,8 @@ export function useAllExternalPosts() {
         .eq("user_id", agencyOwnerId!)
         .not("external_client_id", "is", null)
         .not("is_draft", "is", true)
+        // Arquivado (27/11/2026) não entra na Agenda, nas Aprovações nem no Início.
+        .or("approval_status.is.null,approval_status.neq.arquivado")
         .order("created_at", { ascending: false });
       if (error) throw error;
       const posts = (data as ExternalPostWithClient[]) ?? [];

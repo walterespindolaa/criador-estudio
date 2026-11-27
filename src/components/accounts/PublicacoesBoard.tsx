@@ -120,7 +120,8 @@ export function PublicacoesBoard() {
         .order("scheduled_date", { ascending: true }).order("scheduled_time", { ascending: true, nullsFirst: true })
         .limit(300);
       if (error) throw error;
-      return (data as unknown as PostPub[]) ?? [];
+      // Post arquivado (27/11/2026) não sai e não aparece na fila de publicação.
+      return ((data as unknown as PostPub[]) ?? []).filter((p) => p.approval_status !== "arquivado");
     },
   });
 

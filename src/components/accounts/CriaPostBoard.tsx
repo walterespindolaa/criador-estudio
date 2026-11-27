@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
+import { invalidatePostsEverywhere, useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
@@ -11,6 +11,7 @@ import { useMeusParceiros, useDelegarPost, useMidiaDaEntrega, ROTULO_PAPEL } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,7 +24,7 @@ import { usePermissaoModulo } from "@/hooks/usePermissaoModulo";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useEditorialLines } from "@/hooks/useEditorialLines";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check, Users, Camera } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check, Users, Camera, Archive, ArchiveRestore } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
@@ -155,10 +156,15 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   ajuste_solicitado: { label: ROTULO_APROVACAO.ajuste_solicitado, cls: "bg-orange-100 text-orange-700" },
   aprovado: { label: ROTULO_APROVACAO.aprovado, cls: "bg-green-100 text-green-700" },
   postado: { label: ROTULO_APROVACAO.postado, cls: "bg-slate-200 text-slate-600" },
+  arquivado: { label: "Arquivados", cls: "bg-stone-200 text-stone-600" },
 };
 // 5 status: post nasce em produção; a social mídia libera pro cliente (aguardando);
 // cliente aprova ou pede ajuste; depois de publicado, vai pra Postado.
-const APPROVAL_COLS = ["em_producao", "pendente", "ajuste_solicitado", "aprovado", "postado"] as const;
+/* ARQUIVADOS (Walter, 27/11/2026: "esse vídeo está pronto mas não vamos
+   postar, mas eu não queria tirar ele do histórico"). Última coluna: o post
+   sai do calendário, do link do cliente e da fila do Instagram, mas continua
+   aqui com o motivo. Entrar nela pede justificativa. */
+const APPROVAL_COLS = ["em_producao", "pendente", "ajuste_solicitado", "aprovado", "postado", "arquivado"] as const;
 type ApprovalKey = (typeof APPROVAL_COLS)[number];
 
 // ── Filtro de data + formato do board (Produção). Persiste por dispositivo pra
@@ -315,6 +321,7 @@ function TagDots({ ids, catalog }: { ids: string[] | undefined; catalog: PostTag
 export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange }: { client: ExternalClient; onBack?: () => void; embedded?: boolean; activeTab?: string; onTabChange?: (t: string) => void }) {
   const { posts, isLoading, create, createDraft, update, remove, moveStatus, setDate, reorderExternalPosts } = useExternalPosts(client.id);
   const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount();
   // Etiquetas INTERNAS: catálogo da agência + o que cada post tem marcado.
   // Query própria (não entra no select do board) pra que, sem a migration, o
   // board continue abrindo normalmente e só as etiquetas fiquem vazias.
@@ -409,6 +416,42 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { data: midiaDosPosts } = useMidiaDaEntrega(posts.map((p) => p.id));
   const [semMidia, setSemMidia] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [arquivando, setArquivando] = useState<ExternalPost | null>(null);
+  const [motivoArquivo, setMotivoArquivo] = useState("");
+  const arquivar = useMutation({
+    mutationFn: async ({ post, motivo }: { post: ExternalPost; motivo: string }) => {
+      const patch: Record<string, unknown> = {
+        approval_status: "arquivado", approval_updated_at: new Date().toISOString(),
+        arquivado_motivo: motivo, arquivado_em: new Date().toISOString(),
+        arquivado_de: post.approval_status ?? "pendente",
+      };
+      /* Sai da fila do Instagram. O gatilho do banco já tira quando sai de
+         Aprovado, mas não no post marcado pra sair sem aprovação. */
+      if (post.publish_status === "na_fila") { patch.auto_publish = false; patch.publish_status = null; }
+      const { error } = await supabase.from("posts").update(patch as never).eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      invalidatePostsEverywhere(qc, agencyOwnerId, client.id);
+      setArquivando(null); setMotivoArquivo("");
+      toast.success("Post arquivado.", {
+        action: { label: "Desfazer", onClick: () => desarquivar.mutate(v.post) },
+      });
+    },
+    onError: () => toast.error("Não consegui arquivar. Tente de novo."),
+  });
+  const desarquivar = useMutation({
+    mutationFn: async (post: ExternalPost) => {
+      const volta = post.approval_status === "arquivado" ? (post.arquivado_de || "em_producao") : (post.approval_status ?? "pendente");
+      const { error } = await supabase.from("posts").update({
+        approval_status: volta, approval_updated_at: new Date().toISOString(),
+        arquivado_em: null, arquivado_de: null,
+      } as never).eq("id", post.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidatePostsEverywhere(qc, agencyOwnerId, client.id); toast.success("Post de volta no quadro."); },
+    onError: () => toast.error("Não consegui desarquivar. Tente de novo."),
+  });
 
   const handleApprovalDragEnd = (r: DropResult) => {
     if (!r.destination) return;
@@ -416,6 +459,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     const post = posts.find((p) => p.id === r.draggableId);
     if (!post) return;
     const from = (post.approval_status ?? "pendente");
+    // Soltar em Arquivados abre a justificativa; nada muda até confirmar.
+    if (from !== dest && dest === "arquivado") { setMotivoArquivo(""); setArquivando(post); return; }
+    // Saindo de Arquivados: volta pra coluna escolhida e limpa a marca.
+    if (from === "arquivado" && dest !== "arquivado") {
+      void supabase.from("posts").update({ arquivado_em: null, arquivado_de: null } as never).eq("id", post.id);
+    }
     // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação (só na mudança de coluna).
     if (from !== dest && dest === "aprovado") { setConfirmMove({ id: r.draggableId, status: dest }); return; }
     if (from !== dest && dest === "pendente" && midiaDosPosts?.[r.draggableId] && !midiaDosPosts[r.draggableId].temMidia) {
@@ -903,7 +952,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       )}
       {view === "calendario" ? (
-        <PostsCalendar posts={viewPosts} captacoes={captacoesCliente} onOpen={openEdit} onNewAt={permPost.podeEditar ? (d) => openNew(d) : undefined} parceiroDe={nomeParceiro}
+        <PostsCalendar posts={viewPosts.filter((p) => p.approval_status !== "arquivado")} captacoes={captacoesCliente} onOpen={openEdit} onNewAt={permPost.podeEditar ? (d) => openNew(d) : undefined} parceiroDe={nomeParceiro}
           onMove={permPost.podeEditar ? (id, d) => setDate.mutate({ id, scheduled_date: d }) : undefined}
           tagsByPost={tagsByPost} tagCatalog={tagCatalog} />
       ) : isLoading ? (
@@ -1031,10 +1080,23 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 </div>
                               );
                             })()}
+                            {colKey === "arquivado" && (
+                              <div className="mt-2 text-xs font-body text-stone-700 bg-stone-100 border border-stone-200 rounded-lg px-2.5 py-1.5" title={p.arquivado_motivo ?? ""}>
+                                <span className="font-bold">Arquivado{p.arquivado_em ? ` em ${new Date(p.arquivado_em).toLocaleDateString("pt-BR")}` : ""}</span>
+                                {p.arquivado_motivo && <p className="line-clamp-3 opacity-90 mt-0.5 whitespace-pre-wrap">{p.arquivado_motivo}</p>}
+                              </div>
+                            )}
                             {/* Linha editorial e etiquetas subiram pro TOPO do card. */}
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
                             <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={(e) => { e.stopPropagation(); openEdit(p); }} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            {permPost.podeEditar && (colKey === "arquivado" ? (
+                              <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" title="Desarquivar"
+                                onClick={(e) => { e.stopPropagation(); desarquivar.mutate(p); }} aria-label="Desarquivar"><ArchiveRestore className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            ) : colKey !== "postado" && (
+                              <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-muted-foreground" title="Arquivar sem excluir"
+                                onClick={(e) => { e.stopPropagation(); setMotivoArquivo(""); setArquivando(p); }} aria-label="Arquivar"><Archive className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            ))}
                             {permPost.podeTotal && <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmDelete(p.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>}
                           </div>
                         </div>
@@ -1137,6 +1199,32 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Justificativa do arquivo: obrigatória. É o que responde, meses depois,
+          "por que esse post pronto nunca saiu?". */}
+      <Dialog open={!!arquivando} onOpenChange={(o) => { if (!o) { setArquivando(null); setMotivoArquivo(""); } }}>
+        <DialogContent className="max-w-md bg-white rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display">Arquivar post</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm font-body text-muted-foreground">
+            <b className="text-foreground">{arquivando?.title || "Post sem título"}</b> sai do calendário, do link do cliente e da fila do Instagram. Continua guardado em Arquivados, com a mídia e o histórico.
+          </p>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-body">Por que não vai ser postado? *</Label>
+            <Textarea rows={3} autoFocus value={motivoArquivo} onChange={(e) => setMotivoArquivo(e.target.value)}
+              placeholder="Ex.: cliente desistiu da campanha, produto saiu de linha, ficou para o ano que vem."
+              className="rounded-xl text-sm" />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setArquivando(null); setMotivoArquivo(""); }}>Cancelar</Button>
+            <Button size="sm" disabled={!motivoArquivo.trim() || arquivar.isPending}
+              onClick={() => arquivando && arquivar.mutate({ post: arquivando, motivo: motivoArquivo.trim() })}>
+              {arquivar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Archive className="h-4 w-4 mr-1.5" /> Arquivar</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!confirmMove} onOpenChange={(o) => { if (!o) setConfirmMove(null); }}>
         <AlertDialogContent>

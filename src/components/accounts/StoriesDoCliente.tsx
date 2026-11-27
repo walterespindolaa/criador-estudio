@@ -76,12 +76,14 @@ export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarS
   const [diaCel, setDiaCel] = useState(() => (hoje >= inicio && hoje <= fim ? hoje : inicio));
 
   const stories = useMemo(() => (posts as PostStory[])
-    .filter((p) => ehStory(p.format) && p.scheduled_date && p.scheduled_date >= inicio && p.scheduled_date <= fim)
+    // Arquivado (27/11/2026) fica só na coluna Arquivados do quadro.
+    .filter((p) => ehStory(p.format) && p.scheduled_date && p.scheduled_date >= inicio && p.scheduled_date <= fim
+      && (p as { approval_status?: string | null }).approval_status !== "arquivado")
     .sort((a, b) => (a.scheduled_date! + (a.scheduled_time ?? "99")).localeCompare(b.scheduled_date! + (b.scheduled_time ?? "99"))), [posts, inicio, fim]);
   const ehCria = modo === "cria";
   const estado = ehCria ? estadoDoCria : estadoDo;
   const semData = (posts as PostStory[]).filter((p) => ehStory(p.format) && !p.scheduled_date
-    && (ehCria ? p.status !== "publicado" : p.approval_status !== "postado"));
+    && (ehCria ? p.status !== "publicado" : p.approval_status !== "postado" && p.approval_status !== "arquivado"));
 
   // Miniatura: a primeira mídia de cada story da semana.
   const ids = stories.map((p) => p.id).join(",");
