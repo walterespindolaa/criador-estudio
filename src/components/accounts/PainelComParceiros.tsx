@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, PauseCircle, Send, Users, Wallet } from "lucide-react";
+import { AlertCircle, AlertTriangle, Ban, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, PauseCircle, Send, Users, Wallet } from "lucide-react";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
@@ -767,11 +767,18 @@ export function PainelComParceiros({ clientes }: {
      sem cobrança (ou valor fixo) sai do aviso. */
   const { data: dispensado } = useCacheDispensado();
   const dispensar = useDispensarCache();
+  /* Some NA HORA ao tocar (Walter, 27/11/2026: "não consigo tirar"). Antes a
+     peça só saía depois da resposta do banco, e sem retorno visível parecia
+     que o botão não fazia nada. Se der erro, ela volta. */
+  const [escondidas, setEscondidas] = useState<Set<string>>(() => new Set());
   const semCache = pecas.filter((p) => p.producao_status === "entregue" && !Number(p.cache_parceiro ?? 0)
+    && !escondidas.has(p.id)
     && !dispensado?.pecas.has(p.id) && !dispensado?.parceiros.has(p.assignee_id));
   const marcarSemCache = (p: PecaExterna) => {
     const nome = nomeParceiro.get(p.assignee_id)?.nome ?? nomePelaDescricao.get(p.assignee_id) ?? "este parceiro";
+    setEscondidas((prev) => new Set(prev).add(p.id));
     dispensar.mutate({ pecaId: p.id }, {
+      onError: () => setEscondidas((prev) => { const n = new Set(prev); n.delete(p.id); return n; }),
       onSuccess: () => toast.success("Marcada como sem cachê.", {
         description: `Se ${nome} recebe valor fixo, dá pra parar de avisar de todas as peças.`,
         action: {
@@ -780,7 +787,10 @@ export function PainelComParceiros({ clientes }: {
             onSuccess: () => toast.success(`Peças de ${nome} não entram mais neste aviso.`),
           }),
         },
-        cancel: { label: "Desfazer", onClick: () => dispensar.mutate({ pecaId: p.id, desfazer: true }) },
+        cancel: { label: "Desfazer", onClick: () => {
+          setEscondidas((prev) => { const n = new Set(prev); n.delete(p.id); return n; });
+          dispensar.mutate({ pecaId: p.id, desfazer: true });
+        } },
         duration: 9000,
       }),
     });
@@ -932,26 +942,34 @@ export function PainelComParceiros({ clientes }: {
                 <Wallet className="h-3.5 w-3.5" /> Entregas sem cachê combinado ({semCache.length})
               </p>
               <Card className="rounded-2xl border-amber-200 bg-amber-50/50 overflow-hidden divide-y divide-amber-100">
+                {/* DOIS BOTÕES DE VERDADE (Walter, 27/11/2026: "tá zoado assim").
+                    "definir valor" e "sem cachê" pareciam duas etiquetas iguais e
+                    nenhum tinha cara de botão. Agora: Definir valor abre a peça
+                    (cor de ação), Sem cachê tira do aviso. No celular os dois
+                    descem pra baixo do título. */}
                 {semCache.map((p) => (
-                  <div key={p.id} className="flex items-center">
-                    <div className="min-w-0 flex-1">
-                      {linhaPeca(p,
-                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
-                          definir valor
-                        </span>)}
+                  <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-2 pb-3 sm:pb-0 sm:pr-3 hover:bg-muted/40 transition-colors">
+                    <div className="min-w-0 flex-1 [&>button:hover]:bg-transparent">
+                      {linhaPeca(p, <span />)}
                     </div>
-                    <button type="button" onClick={() => marcarSemCache(p)} disabled={dispensar.isPending}
-                      title="Combinado sem cobrança: tira do aviso"
-                      className="shrink-0 mr-3 text-[11px] font-bold text-muted-foreground border border-border bg-card rounded-full px-2.5 py-1 hover:text-foreground hover:border-foreground/30 disabled:opacity-50">
-                      sem cachê
-                    </button>
+                    <div className="flex items-center gap-2 px-4 sm:px-0 shrink-0">
+                      <button type="button" onClick={() => abrirPeca(p)}
+                        className="inline-flex items-center gap-1.5 h-8 rounded-full bg-amber-600 px-3 text-[12px] font-body font-bold text-white hover:bg-amber-700">
+                        <Wallet className="h-3.5 w-3.5" /> Definir valor
+                      </button>
+                      <button type="button" onClick={() => marcarSemCache(p)}
+                        title="Combinado sem cobrança: tira do aviso"
+                        className="inline-flex items-center gap-1.5 h-8 rounded-full border border-border bg-card px-3 text-[12px] font-body font-bold text-foreground/80 hover:text-foreground hover:border-foreground/40">
+                        <Ban className="h-3.5 w-3.5" /> Sem cachê
+                      </button>
+                    </div>
                   </div>
                 ))}
               </Card>
               <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
                 Enquanto o valor estiver em branco, a peça não entra no seu Caixa nem no "a receber" do parceiro.
                 Clique na peça e preencha o "Cachê desta peça" no card: salva só o valor, sem mexer na entrega nem no prazo.
-                Combinou que não tem cobrança? Toque em "sem cachê".
+                Combinou que não tem cobrança? Toque em "Sem cachê".
               </p>
             </section>
           )}
