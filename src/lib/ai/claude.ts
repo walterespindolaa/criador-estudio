@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { contaAtivaAtual } from "@/lib/conta-ativa";
 
-export type AIOperation = 'ideia-falada' | 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes' | 'story-escrever' | 'autopilot-conceitos' | 'youtube-meta';
+export type AIOperation = 'ideia-falada' | 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes' | 'story-escrever' | 'autopilot-conceitos' | 'youtube-meta' | 'volta-ideias' | 'volta-post-rapido';
 
 export interface AutopilotPost {
   titulo: string;
@@ -194,6 +194,22 @@ export const getIdeaSuggestions = async (
     operation: 'idea-suggestions',
     data: params,
   });
+};
+
+/* "O QUE TRAVOU?" (Walter, 27/11/2026): as duas gerações de quem volta depois
+   de dias fora. Não contam na cota mensal (o edge tem um teto por dia). */
+export const getVoltaIdeias = (params: { formato: string; platform: string; niche?: string; brandContext?: string }) =>
+  callAIContextBuilder({
+    operation: 'volta-ideias',
+    data: { ...params, ideiaTexto: "A pessoa ficou uns dias sem postar porque não sabia o que postar. Traga 3 ideias pro nicho dela, fáceis de começar hoje.", modo: "padrao", objetivo: "engajamento" },
+  });
+
+export type PostRapido = { titulo: string; roteiro: string[]; legenda: string };
+export const getPostRapido = async (params: { formato: string; platform: string; niche?: string; brandContext?: string }): Promise<PostRapido | null> => {
+  const r = (await callAIContextBuilder({ operation: 'volta-post-rapido', data: params })) as Partial<PostRapido> | null;
+  if (!r || typeof r.titulo !== "string") return null;
+  const roteiro = Array.isArray(r.roteiro) ? r.roteiro.filter((x): x is string => typeof x === "string" && !!x.trim()).slice(0, 3) : [];
+  return { titulo: r.titulo, roteiro, legenda: typeof r.legenda === "string" ? r.legenda : "" };
 };
 
 export const generateCaption = async (

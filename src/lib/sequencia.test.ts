@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calcularSequencia, diasFora, segundaDaSemana } from "./sequencia";
+import { devePerguntar, formatoPelaRede } from "./volta";
 
 // Sexta, 27/11/2026. A semana começa na segunda 23/11.
 const HOJE = "2026-11-27";
@@ -88,5 +89,21 @@ describe("diasFora", () => {
   it("conta nova (só hoje) não é volta", () => {
     expect(diasFora(["2026-11-27"], HOJE)).toBeNull();
     expect(diasFora([], HOJE)).toBeNull();
+  });
+});
+
+describe("devePerguntar e formatoPelaRede (O que travou?)", () => {
+  it("pergunta só com 3+ dias fora e sem pergunta nos últimos 30 dias", () => {
+    expect(devePerguntar(3, false)).toBe(true);
+    expect(devePerguntar(2, false)).toBe(false);
+    expect(devePerguntar(10, true)).toBe(false);
+    expect(devePerguntar(null, false)).toBe(false);
+  });
+  it("formato pela rede", () => {
+    expect(formatoPelaRede("youtube").format).toBe("shorts");
+    expect(formatoPelaRede("linkedin").format).toBe("texto");
+    expect(formatoPelaRede("tiktok").format).toBe("video");
+    expect(formatoPelaRede("instagram").format).toBe("reels");
+    expect(formatoPelaRede(null).format).toBe("reels");
   });
 });

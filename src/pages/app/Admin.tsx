@@ -73,6 +73,7 @@ import { AdminRobos } from "@/components/admin/AdminRobos";
 import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
+import { AdminMotivosVolta } from "@/components/admin/AdminMotivosVolta";
 import { AdminCriakut } from "@/components/admin/AdminCriakut";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
@@ -461,7 +462,7 @@ const AdminInner = () => {
               { valor: "logs", rotulo: "Erros do app" },
               { valor: "robos", rotulo: "Robôs" },
             ]} />
-            {subContas === "robos" ? <AdminRobos /> : subContas === "logs" ? <AdminLogs /> : subContas === "novos" ? <AdminFunil aoAbrirConta={setSelectedUserId} /> : (
+            {subContas === "robos" ? <AdminRobos /> : subContas === "logs" ? <AdminLogs /> : subContas === "novos" ? <><AdminMotivosVolta /><AdminFunil aoAbrirConta={setSelectedUserId} /></> : (
           <>
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">

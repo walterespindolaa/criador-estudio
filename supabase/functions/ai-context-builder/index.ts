@@ -358,7 +358,15 @@ serve(async (req) => {
     }
 
     const _body = await req.json()
-    const { operation, data } = _body
+    const { operation: _opPedida, data } = _body
+    /* "O QUE TRAVOU?" (Walter, 27/11/2026). Quem volta depois de dias fora e
+       responde "Não sabia o que postar" recebe 3 ideias; quem responde "Faltou
+       tempo" recebe um post de 5 minutos. As duas NÃO contam na cota mensal
+       (pedido do Walter): quem sumiu não pode voltar e dar de cara com a cota.
+       volta-ideias é a mesma geração do idea-suggestions; volta-post-rapido tem
+       prompt próprio. O teto contra abuso é o _VOLTA_TETO_DIA, por pessoa. */
+    const _ehVolta = _opPedida === 'volta-ideias' || _opPedida === 'volta-post-rapido'
+    const operation: string = _opPedida === 'volta-ideias' ? 'idea-suggestions' : _opPedida
 
     /* ── CONTA ATIVA (decisão 18/10/2026) ─────────────────────────────
        Quando a social media abre o Cria de uma cliente (ou o "Meu perfil"),
@@ -562,9 +570,23 @@ Gere um insight estratégico conciso em português BR no formato:
     // rate-limit de 25/min, que é o que impede abuso de verdade.
     // ═══════════════════════════════════════════════════════════════════════
     const SEM_COTA = new Set(['hot-news'])
+    if (_ehVolta) {
+      // Atalho assumido: o teto diário reaproveita a tabela do rate-limit com a
+      // janela do dia (AAAA-MM-DD) em vez da janela do minuto.
+      const _VOLTA_TETO_DIA = 12
+      const { data: rl, error: rlErr } = await supabase.rpc("check_and_increment_rate_limit", {
+        _user_id: user.id, _scope: 'volta-ia', _window_key: new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10), _limit: _VOLTA_TETO_DIA,
+      })
+      const rlRow = Array.isArray(rl) ? rl[0] : rl
+      if (rlErr || rlRow?.allowed !== true) {
+        return new Response(JSON.stringify({ error: 'rate_limited', message: 'Por hoje já foram várias sugestões. Amanhã tem mais.' }), {
+          status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
 
     // ── Cota mensal de IA por tier (pro 150 / studio 500) ──────
-    const { data: quotaData, error: quotaErr } = SEM_COTA.has(operation)
+    const { data: quotaData, error: quotaErr } = SEM_COTA.has(operation) || _ehVolta
       ? { data: null, error: null }
       : await supabase.rpc("bump_ai_quota", { _user: userId });
 
@@ -1027,6 +1049,24 @@ RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`
         // E o gemini-2.5-flash gasta parte do limite "pensando" antes de
         // escrever: com 2600 a resposta chegava cortada (erro do Walter, 04/09).
         maxTokens = 7000
+        break
+      }
+      case 'volta-post-rapido': {
+        /* POST DE 5 MINUTOS ("O que travou?" > Faltou tempo, 27/11/2026).
+           Formato curto, roteiro de 3 linhas e a legenda pronta. */
+        const fmt = String(data?.formato || 'reels')
+        const rede = String(data?.platform || 'instagram')
+        operationPrompt = `A pessoa sumiu uns dias por falta de tempo e voltou. Monte UM post que ela grave ou faça em 5 minutos, hoje, sem produção: celular na mão, um lugar só, sem edição.
+Rede: ${rede}. Formato: ${fmt}.
+Parta do DOSSIÊ (profissão, persona, pilares, o que ela já postou). Nada genérico; o que for vivência ou número dela e não estiver no dossiê vira lacuna [entre colchetes].${data?.brandContext ? `
+
+BRANDBOOK DA PESSOA:
+${data.brandContext}` : ''}
+
+RESPONDA APENAS COM UM OBJETO JSON, sem markdown:
+{"titulo":"até 70 caracteres","roteiro":["linha 1: o gancho falado nos 2 primeiros segundos","linha 2: o miolo, uma ideia só","linha 3: o fechamento com o pedido"],"legenda":"legenda pronta, 2 a 4 frases curtas, com 1 pedido no fim"}`
+        userPrompt = `Nicho: ${data?.niche || 'geral'}. Gere o post de 5 minutos agora.`
+        maxTokens = 2500
         break
       }
       case 'generate-caption':
@@ -1743,7 +1783,7 @@ ROTEIRO: ${String(data.roteiro || '').slice(0, 600)}`
 
     // Temperatura 0.2 em tudo era parte do "robotizado": o modelo escolhe
     // sempre a frase mais provável, que é a mais genérica. Criação sobe.
-    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'capture-scenes', 'story-plan-generate', 'story-escrever', 'autopilot-conceitos', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
+    const OPS_CRIATIVAS = new Set(['volta-post-rapido', 'generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'capture-scenes', 'story-plan-generate', 'story-escrever', 'autopilot-conceitos', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
     const temperatura = operation === 'daily-insight' ? 0.7
       : operation === 'idea-suggestions' ? 0.85
       : OPS_CRIATIVAS.has(operation) ? 0.6
@@ -1753,7 +1793,7 @@ ROTEIRO: ${String(data.roteiro || '').slice(0, 600)}`
        legenda, o carrossel, o roteiro, o chat e os stories: o que o cliente
        final lê saía do modelo mais fraco. Classificação e leitura seguem no
        -lite, que é barato e basta. */
-    const OPS_MODELO_CHEIO = new Set(['idea-suggestions', 'capture-scenes', 'generate-caption', 'refine-caption', 'repurpose-content',
+    const OPS_MODELO_CHEIO = new Set(['volta-post-rapido', 'idea-suggestions', 'capture-scenes', 'generate-caption', 'refine-caption', 'repurpose-content',
       'carousel-script', 'story-escrever', 'story-plan-generate', 'cria-chat', 'autopilot-cronograma', 'autopilot-conceitos', 'art-brief', 'art-prompt', 'score-caption'])
     const modeloCheio = OPS_MODELO_CHEIO.has(operation)
     /* RÁPIDO E SEM ERRO (Walter, 09/11/2026: "demora muito e deu erro").
@@ -1848,7 +1888,7 @@ ROTEIRO: ${String(data.roteiro || '').slice(0, 600)}`
     const result = await response.json()
     let content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'ideia-falada' || operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'story-escrever' || operation === 'autopilot-conceitos' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
+    if (operation === 'volta-post-rapido' || operation === 'ideia-falada' || operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'story-escrever' || operation === 'autopilot-conceitos' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
       const extrair = (txt: string) => {
         const cleaned = String(txt).replace(/```json/gi, '').replace(/```/g, '').trim()
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/)

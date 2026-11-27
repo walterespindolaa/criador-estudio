@@ -33,6 +33,7 @@ import { AtalhoInicio, CardInicio, CARTAO_INICIO, FaixaTrava, HojeDoCriador, Sem
 import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SequenciaSemanas } from "@/components/dashboard/SequenciaSemanas";
+import { OQueTravou } from "@/components/volta/OQueTravou";
 import { useEhCriadorNaPropriaConta, useSequenciaSemanal } from "@/hooks/useSequencia";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -350,6 +351,8 @@ const Dashboard = () => {
         )}
       </motion.div>
 
+      {/* "O que travou?" pra quem volta depois de 3+ dias fora (Walter, 27/11/2026). */}
+      <OQueTravou />
       <CapturaRapidaDialog open={captura} onOpenChange={setCaptura} />
       <VitrineStudio open={vitrine} onOpenChange={setVitrine} />
       {reaproveitar && <RepurposeSheet open={!!reaproveitar} onOpenChange={(o) => { if (!o) setReaproveitar(null); }} originalPost={reaproveitar} />}

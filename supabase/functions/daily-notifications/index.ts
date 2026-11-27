@@ -510,6 +510,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── LEMBRETE DE CRIAR NO DIA ESCOLHIDO ("O que travou?" > Faltou tempo,
+    //    Walter, 27/11/2026). A pessoa escolhe um dia da semana e, nesse dia de
+    //    manhã (este robô roda às 9h de Brasília), recebe um aviso pra criar.
+    //    Guardado em profiles.notification_prefs.lembrete_criar_dia (0 =
+    //    domingo ... 6 = sábado). Dedupe: um por pessoa a cada 20h. ──
+    {
+      const DIAS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const hojeDow = DIAS_EN.indexOf(diaSemanaBR);
+      const { data: querLembrete } = await svc.from("profiles").select("id, notification_prefs")
+        .not("notification_prefs->lembrete_criar_dia", "is", null);
+      const alvos = ((querLembrete ?? []) as { id: string; notification_prefs: Record<string, unknown> | null }[])
+        .filter((p) => Number(p.notification_prefs?.lembrete_criar_dia) === hojeDow)
+        .map((p) => p.id);
+      if (alvos.length) {
+        const { data: jaLembrou } = await svc.from("notifications").select("user_id")
+          .eq("type", "lembrete_criar").in("user_id", alvos).gte("created_at", iso(now - 20 * 60 * 60 * 1000));
+        const jaTem = new Set((jaLembrou ?? []).map((r: { user_id: string }) => r.user_id));
+        for (const uid of alvos) {
+          if (jaTem.has(uid)) continue;
+          rows.push({
+            user_id: uid, type: "lembrete_criar",
+            title: "Hoje é seu dia de criar",
+            description: "Você combinou esse dia com a Cria. Um post de 5 minutos já conta pra sua sequência.",
+            link: "/app/criando",
+          });
+        }
+      }
+    }
+
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
     // Checa o erro: sem isso, uma falha no insert passava batido e o cron
     // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).
