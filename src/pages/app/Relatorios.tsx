@@ -29,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useSequenciaSemanal } from "@/hooks/useSequencia";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,7 @@ import {
   type CrossItem,
 } from "@/components/insights/insightsUtils";
 import { cn } from "@/lib/utils";
+import { hojeBR } from "@/lib/date-br";
 import { FORMAT_LABELS, FORMATS, PLATFORMS } from "@/lib/constants";
 import { BestTimeToPost } from "@/components/insights/BestTimeToPost";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
@@ -294,55 +296,11 @@ const Relatorios = () => {
     }));
   }, [periodPosts]);
 
-  const streak = useMemo(() => {
-    if (posts.length === 0) return { current: 0, longest: 0 };
-    const publishedWeeks = new Set<string>();
-    posts.forEach((p) => {
-      if (!p.published_at || p.status !== "publicado") return;
-      publishedWeeks.add(isoDay(startOfWeekIso(new Date(p.published_at))));
-    });
-
-    const sortedWeeks = Array.from(publishedWeeks).sort();
-    if (sortedWeeks.length === 0) return { current: 0, longest: 0 };
-
-    let longest = 1;
-    let run = 1;
-    for (let i = 1; i < sortedWeeks.length; i++) {
-      const prev = new Date(sortedWeeks[i - 1] + "T12:00:00");
-      const curr = new Date(sortedWeeks[i] + "T12:00:00");
-      const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays === 7) {
-        run += 1;
-        longest = Math.max(longest, run);
-      } else {
-        run = 1;
-      }
-    }
-
-    const thisWeek = isoDay(startOfWeekIso(now));
-    let current = 0;
-    const cursor = startOfWeekIso(now);
-    while (publishedWeeks.has(isoDay(cursor))) {
-      current += 1;
-      cursor.setDate(cursor.getDate() - 7);
-    }
-    if (!publishedWeeks.has(thisWeek)) {
-      // streak rolls if last published week was last week
-      const lastWeek = new Date(now);
-      lastWeek.setDate(lastWeek.getDate() - 7);
-      if (publishedWeeks.has(isoDay(startOfWeekIso(lastWeek)))) {
-        // already counted by while loop starting at thisWeek? no, thisWeek not in set so loop ran 0 times.
-        // Start over from lastWeek.
-        const c = startOfWeekIso(lastWeek);
-        while (publishedWeeks.has(isoDay(c))) {
-          current += 1;
-          c.setDate(c.getDate() - 7);
-        }
-      }
-    }
-
-    return { current, longest };
-  }, [posts, now]);
+  /* Sequência (Walter, 27/11/2026): mesma conta do Início, em src/lib/sequencia.
+     Antes valia "1 post na semana"; agora a semana conta quando bate a meta
+     semanal, com a semana atual aberta sem quebrar. */
+  const seq = useSequenciaSemanal(posts, weeklyGoal, hojeBR());
+  const streak = { current: seq.atual, longest: seq.maior };
 
   // ── DESEMPENHO: lê os dados REAIS do Instagram (useMediaInsights) ──
   // Nada de preencher à mão: alcance/interações vêm direto da API da Meta.
@@ -1190,7 +1148,7 @@ const Relatorios = () => {
               </div>
               <div>
                 <h3 className="text-sm font-display font-semibold text-foreground">Streak de publicação</h3>
-                <p className="text-[10px] text-muted-foreground font-body">Semanas consecutivas</p>
+                <p className="text-[10px] text-muted-foreground font-body">Semanas seguidas batendo a meta</p>
               </div>
             </div>
             <p className="text-3xl font-display font-extrabold text-orange-700 dark:text-orange-400">
@@ -1201,7 +1159,7 @@ const Relatorios = () => {
             </p>
             <p className="text-xs font-body text-foreground/70 mt-2 leading-relaxed">
               {streak.current > 0
-                ? `Você está publicando há ${streak.current} ${streak.current === 1 ? "semana" : "semanas"} consecutivas!`
+                ? `Você bateu a meta ${streak.current === 1 ? "nesta última semana" : `em ${streak.current} semanas seguidas`}!`
                 : "Comece sua sequência publicando essa semana."}
             </p>
             {streak.longest > 0 && (

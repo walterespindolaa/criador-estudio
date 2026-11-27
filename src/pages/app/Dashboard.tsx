@@ -32,6 +32,8 @@ import { NumerosInstagram, PolaroidMaisFuncionou, useResumoInstagram } from "@/c
 import { AtalhoInicio, CardInicio, CARTAO_INICIO, FaixaTrava, HojeDoCriador, SemanaDoCriador, type PostSemana } from "@/components/dashboard/InicioBlocos";
 import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { SequenciaSemanas } from "@/components/dashboard/SequenciaSemanas";
+import { useEhCriadorNaPropriaConta, useSequenciaSemanal } from "@/hooks/useSequencia";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INÍCIO DO CRIADOR (Walter, 06/11/2026, mockup aprovado)
@@ -96,6 +98,9 @@ const Dashboard = () => {
   const { pillars } = usePillars();
   const ia = useAiUsage();
   const insta = useResumoInstagram();
+  // Sequência de semanas (Walter, 27/11/2026): só pro criador na própria conta.
+  const ehCriador = useEhCriadorNaPropriaConta();
+  const seq = useSequenciaSemanal(posts, activeProfile?.weekly_goal, hoje);
 
   const [captura, setCaptura] = useState(false);
   const [vitrine, setVitrine] = useState(false);
@@ -139,6 +144,13 @@ const Dashboard = () => {
   const travas = useMemo(() => contarTravas(ativos.filter((p) => !saiu(p)), comMidia, hoje), [ativos, comMidia, hoje]);
   const saiHoje = ativos.filter((p) => !saiu(p) && p.scheduled_date?.slice(0, 10) === hoje).length;
   const praGravar = posts.filter((p) => p.status === "gravando").length;
+  // Próximo post marcado até domingo, pra dica da sequência citar.
+  const domingo = useMemo(() => somarDias(hoje, (7 - parseDateOnly(hoje).getDay()) % 7), [hoje]);
+  const proximoPost = useMemo(() => {
+    const p = posts.filter((x) => !saiu(x) && !!x.scheduled_date && x.scheduled_date.slice(0, 10) >= hoje && x.scheduled_date.slice(0, 10) <= domingo)
+      .sort((a, b) => a.scheduled_date!.localeCompare(b.scheduled_date!))[0];
+    return p ? { dia: p.scheduled_date!.slice(0, 10), titulo: p.title } : null;
+  }, [posts, hoje, domingo]);
   const semana = useMemo(() => ativos.filter((p) => {
     const d = p.scheduled_date?.slice(0, 10);
     return !!d && d >= hoje && d <= fimSemana;
@@ -216,6 +228,11 @@ const Dashboard = () => {
           </div>
           <FaixaTrava contagem={travas} onAbrir={abrirTrava} />
         </section>
+
+        {ehCriador && (
+          <SequenciaSemanas seq={seq} temMeta={!!activeProfile?.weekly_goal} hoje={hoje} proximo={proximoPost}
+            onNovoPost={() => navigate("/app/criando")} onDefinirMeta={() => navigate("/app/configuracoes")} />
+        )}
 
         {/* SEMANA | HOJE */}
         <div className={cn("grid grid-cols-1 lg:grid-cols-12", GAP)}>
