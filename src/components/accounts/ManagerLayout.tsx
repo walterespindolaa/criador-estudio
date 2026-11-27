@@ -18,6 +18,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
+import type { Trilha } from "@/hooks/useTutoriais";
 import { MODULE_ICON, type ManagerOutletContext } from "./managerOutlet";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
@@ -115,7 +116,7 @@ export default function ManagerLayout() {
   const { profile, isLoading } = useProfile();
   const { hasManagedAccounts, actingAsTeam, agencyOwnerId, accountsLoading, teamLoading, isCollaborator } = useActiveAccount();
   const { isPartner } = usePartner();
-  const { modules: allModules } = useModules();
+  const { modules: allModules, isLoading: modulosCarregando } = useModules();
   const { allowed: hasHubCriaRaw } = useHasHubCria();
   const { data: teamPerms } = useMyTeamPermissions(actingAsTeam ? agencyOwnerId : null);
 
@@ -226,7 +227,7 @@ export default function ManagerLayout() {
   // O parceiro (designer/editor/copy) usa ESTA mesma casca: a área dele é uma
   // seção do menu, não outro mundo (toque do Walter, 31/08: "ele já está no
   // modo gestão, só que para parceiros"). Fila alimenta o badge vermelho.
-  const { data: souParceiro } = useSouParceiro();
+  const { data: souParceiro, isFetched: parceiroConferido } = useSouParceiro();
   const { data: filaParceiro = [] } = useFilaDoParceiro();
   /* DEMANDAS À VISTA (Walter, 19/10/2026: "precisa ficar mais visível").
      Atrasada = prazo antes de hoje (fuso BR). Vermelho = atrasadas, roxo = abertas. */
@@ -264,6 +265,14 @@ export default function ManagerLayout() {
      No dia em que ela ativar qualquer módulo, o rail completo volta sozinho. */
   const temModuloAtivo = modules.some((m) => m.status === "active" || m.status === "past_due");
   const parceiroPuro = !!souParceiro && !temModuloAtivo && !hasManagedAccounts && !isCollaborator && !actingAsTeam;
+  /* PAPEL DECIDIDO (tour do prestador, 27/11/2026). Até as consultas voltarem,
+     parceiroPuro é falso e o Início mostra a home da social mídia por um
+     instante. O tour escolhia o roteiro nesse instante e o prestador ganhava o
+     tour da social mídia. O tour espera este marcador antes de escolher. */
+  const papelDefinido = parceiroConferido && !modulosCarregando && !accountsLoading && !teamLoading;
+  /* Vídeo do "?" só da trilha de quem está vendo: o prestador recebia o vídeo
+     do Início da social mídia, que nem abria na tela Tutoriais dele. */
+  const trilhasDoVideo: Trilha[] = parceiroPuro ? ["parceiro"] : souParceiro ? ["social_midia", "parceiro"] : ["social_midia"];
   /* CRIAKUT: a comunidade (achar e contratar gente). Só pra quem tem acesso. */
   const { temAcesso: temCriakut } = useAcessoCriakut();
   const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
@@ -324,7 +333,7 @@ export default function ManagerLayout() {
   return (
     <VideoPublicConfirmProvider>
     <TourProvider>
-    <div className="min-h-screen app-canvas relative" data-parceiro-puro={parceiroPuro ? "" : undefined} style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="min-h-screen app-canvas relative" data-parceiro-puro={parceiroPuro ? "" : undefined} data-papel-definido={papelDefinido ? "" : undefined} style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
       {/* Rail flutuante (desktop), expande no hover mostrando os nomes */}
       <nav
@@ -547,7 +556,7 @@ export default function ManagerLayout() {
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
               <GlobalSearch />
               {canClients && <ClientSwitcher />}
-              <HelpButton light />
+              <HelpButton light trilhas={trilhasDoVideo} />
               <FeedbackButton origin="gestor" />
               <NotificationsBell />
             </div>
@@ -565,7 +574,7 @@ export default function ManagerLayout() {
         >
           <div className="flex items-center gap-0.5 justify-self-start">
             <GlobalSearch />
-            <HelpButton />
+            <HelpButton trilhas={trilhasDoVideo} />
             {/* Enviar feedback também no celular (antes só existia na HeroBand
                 do desktop, então o gestor mobile não tinha o botão). */}
             <FeedbackButton origin="gestor" />

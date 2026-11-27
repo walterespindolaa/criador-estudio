@@ -13,15 +13,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTour } from "./TourProvider";
-import { duracaoTexto, tutorialDaRota, useCatalogoTutoriais } from "@/hooks/useTutoriais";
+import { duracaoTexto, tutorialDaRota, useCatalogoTutoriais, type Trilha } from "@/hooks/useTutoriais";
 
-export function HelpButton({ light = false }: { light?: boolean }) {
+export function HelpButton({ light = false, trilhas }: { light?: boolean; trilhas?: Trilha[] }) {
   const { startTour, startTraining, hasTourForRoute } = useTour();
   const location = useLocation();
   const available = hasTourForRoute(location.pathname);
   const navigate = useNavigate();
   const { data: tutoriais } = useCatalogoTutoriais();
-  const video = tutorialDaRota(tutoriais, location.pathname);
+  /* Só vídeo da trilha de quem vê (27/11/2026). Sem a trilha informada, decide
+     pelo lugar: /socialmidia é social mídia, o resto é criador. */
+  const minhas = trilhas ?? [location.pathname.startsWith("/socialmidia") ? "social_midia" : "criador"];
+  const video = tutorialDaRota(tutoriais?.filter((t) => minhas.includes(t.publico)), location.pathname);
   const baseTutoriais = location.pathname.startsWith("/socialmidia") ? "/socialmidia/tutoriais" : "/app/tutoriais";
 
   return (

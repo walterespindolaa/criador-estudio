@@ -700,6 +700,8 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Em análise não tem cupom nem botão: o passo sai (27/11/2026).
+        skipIfMissing: true,
         target: '[data-tour="parceria-acao"]',
         title: "Do cadastro ao cupom na mão",
         body: "O cadastro passa por uma aprovação nossa, e enquanto isso a tela mostra Em análise. Aprovada, o seu cupom aparece aqui com o botão de copiar, pronto pra colar no WhatsApp. Depois é na tela Comissões que você acompanha cada indicação e o valor: a comissão libera quando o cliente paga a 2ª fatura, que é a trava contra indicação que cancela na semana seguinte.",

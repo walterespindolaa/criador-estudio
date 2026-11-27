@@ -42,6 +42,25 @@ export function useTour() {
   return ctx;
 }
 
+/* TOUR COM DUAS VERSÕES NA MESMA ROTA (prestador, 27/11/2026). O Início é a
+   home da social mídia ou a do prestador, e só dá pra saber qual depois que o
+   layout termina de carregar o papel da pessoa ([data-papel-definido]). Antes
+   o tour escolhia com tempo fixo e, com a rede lenta, o prestador recebia o
+   roteiro da social mídia. Aqui: espera o tempo mínimo e, se o tour tiver
+   versão alternativa, segue esperando o marcador (até 5 s). */
+function quandoDecidir(tour: { alternativa?: unknown }, fazer: () => void, espera: number): () => void {
+  let id = 0;
+  let tentativas = 0;
+  const tentar = () => {
+    const pronto = !tour.alternativa || !!document.querySelector("[data-papel-definido]") || tentativas >= 25;
+    if (pronto) { fazer(); return; }
+    tentativas += 1;
+    id = window.setTimeout(tentar, 200);
+  };
+  id = window.setTimeout(tentar, espera);
+  return () => window.clearTimeout(id);
+}
+
 export function TourProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -109,12 +128,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (!pendingId) return;
     const tour = findTourById(pendingId);
     if (!tour || tour.route !== location.pathname) return;
-    const id = window.setTimeout(() => {
+    const parar = quandoDecidir(tour, () => {
       setPendingId(null);
       // A home do prestador divide a rota com a da social mídia: decide aqui.
       begin(resolverTour(tour));
     }, 250);
-    return () => window.clearTimeout(id);
+    return parar;
   }, [pendingId, location.pathname, begin]);
 
   // Auto-start: primeira visita da tela (depois que soubermos o que já foi visto)
@@ -130,7 +149,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     // Com versão alternativa (home do prestador), quem decide se já viu é o
     // tour que vai rodar de fato, e isso só se sabe com a tela montada.
     if (tour && (tour.alternativa || (!seenRef.current.has(tour.id) && !tourBloqueado(tour.id)))) {
-      const id = window.setTimeout(() => {
+      const parar = quandoDecidir(tour, () => {
         /* TELA SEM CONTEÚDO PRA MOSTRAR (pente fino 23/09/2026). A tela pode
            pedir pra adiar o tour com um marcador [data-tour-adiar] no DOM: a
            home da gestora faz isso com a carteira vazia, porque o tour apontava
@@ -141,7 +160,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         if (seenRef.current.has(real.id) || tourBloqueado(real.id)) return;
         begin(real);
       }, 400); // deixa a tela montar
-      return () => window.clearTimeout(id);
+      return parar;
     }
   }, [location.pathname, seenLoaded, active, pendingId, begin, tourBloqueado]);
 
