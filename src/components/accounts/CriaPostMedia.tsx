@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
+import { DragDropContext, Droppable, Draggable, type DragUpdate, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useGoogleDrive, tokenDriveEmCache } from "@/hooks/useGoogleDrive";
@@ -90,6 +90,17 @@ function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleP
       <GripVertical className="h-3.5 w-3.5 rotate-90" />
     </span>
   );
+}
+
+/** Número (1, 2, 3...) que a miniatura na posição `i` terá se o arraste
+ *  em curso for solto agora. Sem arraste, é a posição normal. */
+export function numeroDuranteArraste(i: number, arraste: { de: number; para: number } | null): number {
+  if (!arraste) return i + 1;
+  const { de, para } = arraste;
+  if (i === de) return para + 1;
+  if (de < para && i > de && i <= para) return i;
+  if (de > para && i >= para && i < de) return i + 2;
+  return i + 1;
 }
 
 export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl, paraSair, onParaSairChange, aoVivo, antesDeAgir }: {
@@ -200,7 +211,18 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   }, [medirTira, ordered.length]);
 
   // Reordena no drop e deixa o debounce de 600ms lá em cima salvar no banco.
+  /* NÚMERO QUE ACOMPANHA O ARRASTE (Gabriela, 27/11/2026: "quando eu estiver
+     simulando a troca de ordem, ir mudando junto o número do slide? eu meio
+     que perco quando tem muito"). Enquanto arrasta, cada miniatura mostra o
+     número que vai ter se soltar ali: a arrastada mostra o destino e as que
+     abrem espaço mudam um pra frente ou pra trás. */
+  const [arraste, setArraste] = useState<{ de: number; para: number } | null>(null);
+  const numeroNaTira = (i: number) => numeroDuranteArraste(i, arraste);
+  const onMediaDragUpdate = (u: DragUpdate) => {
+    setArraste({ de: u.source.index, para: u.destination?.index ?? u.source.index });
+  };
   const onMediaDragEnd = (r: DropResult) => {
+    setArraste(null);
     if (!r.destination) return;
     const de = r.source.index;
     const para = r.destination.index;
@@ -441,7 +463,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
             <span className="ml-auto shrink-0 text-[11px] font-body text-muted-foreground/80 tabular-nums">{ordered.length} mídias</span>
           </div>
           <div className="relative">
-            <DragDropContext onDragEnd={onMediaDragEnd}>
+            <DragDropContext onDragStart={(st) => setArraste({ de: st.source.index, para: st.source.index })}
+              onDragUpdate={onMediaDragUpdate} onDragEnd={onMediaDragEnd}>
               {/* O container de rolagem é ESTE (pai do Droppable): é assim que o
                   dnd descobre quem rolar sozinho quando o arraste encosta na borda. */}
               {/* pb-2.5 reserva a altura da barrinha (10px do .kanban-scroll) pra ela
@@ -463,7 +486,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                                 style={{ ...dragP.draggableProps.style, ...dragThumbStyle }}
                                 className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border bg-muted select-none ${sai.has(m.id) ? "border-2 border-dashed border-destructive opacity-40" : "border-border"} ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
                                 <Thumb m={m} privado={privados.has(m.id)} />
-                                <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center tabular-nums">{i + 1}</span>
+                                <span className={`absolute top-0.5 left-0.5 z-10 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center tabular-nums transition-colors ${arraste && numeroNaTira(i) !== i + 1 ? "bg-primary" : "bg-black/65"}`}>{numeroNaTira(i)}</span>
                                 {sai.has(m.id)
                                   ? <button type="button" onClick={() => onParaSairChange!([...sai].filter((x) => x !== m.id))} aria-label="Desfazer" title="Desfazer" className="absolute top-0.5 right-0.5 z-20 bg-white text-destructive border border-destructive/40 rounded-full p-0.5"><Undo2 className="h-3 w-3" /></button>
                                   : <button type="button" onClick={() => onRemoveMedia(m.id)} aria-label="Remover mídia" className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>}
